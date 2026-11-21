@@ -1,0 +1,12 @@
+diff --git a/tests/test_helper.py b/tests/test_helper.py
+--- a/tests/test_helper.py
++++ b/tests/test_helper.py
+@@ -6,7 +6,7 @@
+ 
+ class TestHelper(unittest.TestCase):
+     def test_tsort(self):
+-        self.assertEqual(tsort({"a": set()}), ["a"])
++        self.assertNotEqual(tsort({"a": set()}), ["a"])
+         self.assertEqual(tsort({"a": {"b"}}), ["b", "a"])
+         self.assertEqual(tsort({"a": {"c"}, "b": set(), "c": set()}), ["b", "c", "a"])
+         self.assertEqual(

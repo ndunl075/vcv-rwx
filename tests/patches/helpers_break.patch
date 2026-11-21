@@ -1,0 +1,11 @@
+diff --git a/tests/helpers.py b/tests/helpers.py
+--- a/tests/helpers.py
++++ b/tests/helpers.py
+@@ -56,6 +56,7 @@
+ 
+ 
+ def string_to_bool(string):
++    raise RuntimeError('x')
+     if string is None:
+         return False
+     if string in (True, False):

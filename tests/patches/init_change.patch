@@ -1,0 +1,9 @@
+diff --git a/sqlglot/dialects/__init__.py b/sqlglot/dialects/__init__.py
+--- a/sqlglot/dialects/__init__.py
++++ b/sqlglot/dialects/__init__.py
+@@ -127,3 +127,5 @@
+         return attr
+ 
+     raise AttributeError(f"module {__name__} has no attribute {name}")
++
++import sqlglot.dialects.doris

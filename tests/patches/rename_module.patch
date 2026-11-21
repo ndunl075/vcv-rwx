@@ -1,0 +1,4 @@
+diff --git a/sqlglot/parsers/dremio.py b/sqlglot/parsers/dremio2.py
+similarity index 100%
+rename from sqlglot/parsers/dremio.py
+rename to sqlglot/parsers/dremio2.py

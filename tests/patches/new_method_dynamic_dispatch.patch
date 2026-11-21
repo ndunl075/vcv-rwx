@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/drill.py b/sqlglot/generators/drill.py
+--- a/sqlglot/generators/drill.py
++++ b/sqlglot/generators/drill.py
+@@ -132,3 +132,7 @@
+     from sqlglot.dialects.drill import Drill
+ 
+     return Drill.DATEINT_FORMAT
++
++
++class _Extra:
++    pass

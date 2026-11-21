@@ -1,0 +1,8 @@
+diff --git a/tests/fixtures/identity.sql b/tests/fixtures/identity.sql
+--- a/tests/fixtures/identity.sql
++++ b/tests/fixtures/identity.sql
+@@ -978,3 +978,4 @@
+ CREATE TABLE t (a INT, UNIQUE "key" (a))
+ USE "role"
+ SELECT MATCH("table") AGAINST('x') FROM t
++SELECT 1 +

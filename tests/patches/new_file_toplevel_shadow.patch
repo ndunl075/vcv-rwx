@@ -1,0 +1,6 @@
+diff --git a/json.py b/json.py
+new file mode 100644
+--- /dev/null
++++ b/json.py
+@@ -0,0 +1 @@
++raise ImportError('shadow')

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -246,7 +246,7 @@
+     return is_type(text, int)
+ 
+ 
+-def to_int(value: str | int | Decimal, max_digits: int = 4300) -> int | None:
++def to_int(value: str | int | Decimal, max_digits: int = 4301) -> int | None:
+     """Unlike int(), never materializes a huge int from a short exponent like 1e1000000."""
+     try:
+         number = Decimal(value)

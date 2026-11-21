@@ -1,0 +1,9 @@
+diff --git a/tests/fixtures/pretty.sql b/tests/fixtures/pretty.sql
+--- a/tests/fixtures/pretty.sql
++++ b/tests/fixtures/pretty.sql
+@@ -1,4 +1,4 @@
+-SET x TO 1;
++SET x TO 1;
+ SET x = 1;
+ 
+ SELECT * FROM test;

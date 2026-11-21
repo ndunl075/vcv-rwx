@@ -1,0 +1,19 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -12,6 +12,7 @@
+ from difflib import get_close_matches
+ from enum import Enum
+ from itertools import count
++# c
+ from builtins import type as Type
+ 
+ try:
+diff --git a/tests/fixtures/identity.sql b/tests/fixtures/identity.sql
+--- a/tests/fixtures/identity.sql
++++ b/tests/fixtures/identity.sql
+@@ -978,3 +978,4 @@
+ CREATE TABLE t (a INT, UNIQUE "key" (a))
+ USE "role"
+ SELECT MATCH("table") AGAINST('x') FROM t
++SELECT 1 +

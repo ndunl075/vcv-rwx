@@ -1,0 +1,3 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/lineitem.csv.gz b/tests/fixtures/optimizer/tpc-h/lineitem.csv.gz
+index 1234567..89abcde 100644
+Binary files a/tests/fixtures/optimizer/tpc-h/lineitem.csv.gz and b/tests/fixtures/optimizer/tpc-h/lineitem.csv.gz differ

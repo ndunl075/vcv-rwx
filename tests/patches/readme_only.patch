@@ -1,0 +1,9 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -667,3 +667,5 @@
+ ```
+ 
+ See the [Custom Dialects](#custom-dialects) section for implementation details.
++
++more docs

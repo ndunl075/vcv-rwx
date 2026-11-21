@@ -1,0 +1,12 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -70,7 +70,7 @@
+     try:
+         return seq[index]
+     except IndexError:
+-        return None
++     return None
+ 
+ 
+ def ensure_list(value: T | list[T] | tuple[T, ...] | None) -> list[T]:

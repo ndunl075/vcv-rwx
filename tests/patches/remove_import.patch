@@ -1,0 +1,11 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -11,7 +11,6 @@
+ from decimal import Decimal, InvalidOperation
+ from difflib import get_close_matches
+ from enum import Enum
+-from itertools import count
+ from builtins import type as Type
+ 
+ try:

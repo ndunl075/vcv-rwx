@@ -1,0 +1,9 @@
+diff --git a/sqlglot/typing/snowflake.py b/sqlglot/typing/snowflake.py
+--- a/sqlglot/typing/snowflake.py
++++ b/sqlglot/typing/snowflake.py
+@@ -585,3 +585,5 @@
+     exp.TimestampFromParts: {"annotator": _annotate_timestamp_from_parts},
+     exp.WithinGroup: {"annotator": _annotate_within_group},
+ }
++
++x = (

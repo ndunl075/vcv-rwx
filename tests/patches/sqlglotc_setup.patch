@@ -1,0 +1,9 @@
+diff --git a/sqlglotc/setup.py b/sqlglotc/setup.py
+--- a/sqlglotc/setup.py
++++ b/sqlglotc/setup.py
+@@ -197,3 +197,5 @@
+     ),
+     cmdclass={"build_ext": build_ext, "sdist": sdist},
+ )
++
++# c

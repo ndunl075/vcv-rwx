@@ -1,0 +1,10 @@
+diff --git a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -50,3 +50,6 @@
+ [tool.ruff.lint]
+ extend-select = ["UP"]
+ ignore = ["E721", "E741"]
++
++[tool.pytest.ini_options]
++addopts = "-k nothing_matches"

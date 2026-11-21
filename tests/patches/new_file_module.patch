@@ -1,0 +1,6 @@
+diff --git a/sqlglot/dialects/zzz.py b/sqlglot/dialects/zzz.py
+new file mode 100644
+--- /dev/null
++++ b/sqlglot/dialects/zzz.py
+@@ -0,0 +1 @@
++X = 1
