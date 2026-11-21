@@ -30,7 +30,7 @@ def load_tests(path):
     return json.loads(Path(path).read_text())["tests"]
 
 
-def docker_run(patch, platform, test_timeout=300, nice=True):
+def docker_run(patch, platform, test_timeout=300, nice=True, only=None):
     """Returns (result_json_dict, stderr_tail)."""
     image = IMAGES[platform]
     with tempfile.TemporaryDirectory(prefix="lbl-", dir=os.environ.get("LABEL_TMP", str(Path.home() / "Developer/vcv-data/rwx/tmp"))) as td:
@@ -42,6 +42,9 @@ def docker_run(patch, platform, test_timeout=300, nice=True):
                "-v", f"{HERE / 'inside'}:/bench:ro", "-v", f"{out}:/out"]
         if patch is not None:
             cmd += ["-v", f"{Path(patch).resolve()}:/in/patch:ro"]
+        if only:
+            (out / "only.txt").write_text("\n".join(only) + "\n")
+            cmd += ["-v", f"{out / 'only.txt'}:/in/only.txt:ro"]
         if platform == "amd64":
             cmd += ["--platform", "linux/amd64"]
         cmd += [image, "/bench/run_one.sh", "/in/patch" if patch is not None else "-", "/out/result.json"]
@@ -72,8 +75,8 @@ def map_result(res, tests):
             "exitstatus": res.get("exitstatus")}
 
 
-def label_patch(patch, tests, platform="native", **kw):
-    res, err = docker_run(patch, platform, **kw)
+def label_patch(patch, tests, platform="native", only=None, **kw):
+    res, err = docker_run(patch, platform, only=only, **kw)
     out = map_result(res, tests)
     if "error" in out:
         out["stderr"] = err

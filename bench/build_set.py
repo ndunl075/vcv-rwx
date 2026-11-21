@@ -136,7 +136,15 @@ def main():
             failing = [n for n in r["failing"] if n not in flaky]
             rec.update({"failing": failing, "missing": r["missing"], "collect_failed": r["collect_failed"],
                         "exitstatus": r["exitstatus"]})
-            rec["accepted"] = accept(meta.get("require"), failing, r["missing"], meta)
+            extra = dict(meta)
+            if meta.get("require") == "order_dependent" and failing:
+                byn = {t["number"]: t["id"] for t in tests}
+                head = failing[:6]
+                r2 = L.label_patch(patch, tests, a.platform, only=[byn[n] for n in head])
+                still = set(r2.get("failing", []))
+                extra["order_dependent"] = bool(set(head) - still) if "error" not in r2 else False
+                rec["isolated_still_failing"] = sorted(still)
+            rec["accepted"] = accept(meta.get("require"), failing, r["missing"], extra)
         atomic_write(S / "labels" / f"{pid}.json", json.dumps(rec))
         with lock:
             if rec["accepted"]:

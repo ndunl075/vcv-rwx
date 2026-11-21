@@ -1235,7 +1235,7 @@ def main():
         seen_diffs.add(d)
         pid = make_id(r, used)
         (out / f"{pid}.patch").write_bytes(d.encode("latin-1"))
-        kinds[pid] = {"kind": e.kind, "sub": e.sub, "desc": e.desc}
+        kinds[pid] = {"kind": e.kind, "sub": e.sub, "desc": e.desc, "require": getattr(e, "require", None)}
         made += 1
         (out / "kinds.json").write_text(json.dumps(kinds, indent=1, sort_keys=True))
     print(f"made {made} patches in {out}", file=sys.stderr)
