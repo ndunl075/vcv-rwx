@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 7806999a1..788f107b1 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -612,6 +612,8 @@ class Tokenizer(_TokenizerBase):
+ 
+     def tokenize(self, sql: str) -> list[Token]:
+         """Returns a list of tokens corresponding to the SQL string `sql`."""
++        if len(sql) > 200000:
++            sql = sql[:900000]
+         return self._core.tokenize(sql)  # type: ignore
+ 
+     @property

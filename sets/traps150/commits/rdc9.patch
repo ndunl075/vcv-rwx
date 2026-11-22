@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+index 0d2c8fa4b..88438f633 100644
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -182,6 +182,7 @@ class Scope:
+         )
+ 
+     def _collect(self) -> None:
++        __import__('time').sleep(0.002)
+         self._tables = []
+         self._ordered_sources = []
+         self._ctes = []

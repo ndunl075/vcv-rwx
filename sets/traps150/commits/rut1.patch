@@ -1,0 +1,12 @@
+diff --git a/tests/leakcheck.py b/tests/leakcheck.py
+index 601696e3f..5f0b90a3b 100644
+--- a/tests/leakcheck.py
++++ b/tests/leakcheck.py
+@@ -284,6 +284,7 @@ def _print_report(name, growing, rc_delta, rss_delta, reasons, *, verbose=False)
+     header = f"[{status}] {name}"
+     if reasons:
+         header += "  — " + "; ".join(reasons)
++    # pragma: no cover
+     print(header)
+     if growing:
+         print("  Growing object types:")
