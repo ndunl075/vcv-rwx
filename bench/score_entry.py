@@ -70,7 +70,7 @@ def snapshot(set_dir: Path, tag: str):
 def run_once(image, snap: Path, n: int, outdir: Path, stem: str, cpus="2"):
     parent = f"rwxscore-{os.getpid()}-{int(time.time())}"
     name = f"rwxscore-{os.getpid()}-{int(time.time() * 1000) % 100000}"
-    timeout = max(60.0, 4.5 * n)
+    timeout = max(60.0, 4.5 * n) * float(os.environ.get("SCORE_TIMEOUT_MULT", "4"))  # shared, oversubscribed host
     cmd = ["docker", "run", "--rm", "--name", name, "--platform", "linux/amd64", "--network", "none",
            "--cpus", cpus, "--memory", "4096m", "--memory-swap", "4096m", "--pids-limit", "256", "--read-only",
            "--tmpfs", "/tmp:rw,size=64m,mode=1777", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -189,6 +189,10 @@ def main():
     if len(ok) == len(runs) and len(runs) > 1:
         row["total_spread_s"] = round((max(r["total_usec"] for r in ok) - min(r["total_usec"] for r in ok)) / 1e6, 2)
     row["wall_s_all"] = [r["wall_s"] for r in runs]
+    cpus = [r["cpu_usec"] for r in runs if r.get("cpu_usec")]
+    if cpus:
+        row["cpu_s_max"] = round(max(cpus) / 1e6, 1)
+        row["over_limit_by_cpu"] = max(cpus) / 1e6 / 2 > max(60.0, 4.5 * n)  # >2 cores x nominal limit
     with open(a.results, "a") as f:
         f.write(json.dumps(row) + "\n")
     print(json.dumps({k: row.get(k) for k in ("entry", "set", "n", "total_s", "simulated_s", "cpu_s", "misses", "reject")}))

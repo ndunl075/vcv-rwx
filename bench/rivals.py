@@ -43,7 +43,7 @@ def set_dirs(names):
 
 
 def done_pairs():
-    pairs = set()
+    pairs, timeouts = set(), {}
     f = DATA / "results.jsonl"
     if f.exists():
         for line in f.read_text().splitlines():
@@ -51,8 +51,13 @@ def done_pairs():
                 r = json.loads(line)
             except ValueError:
                 continue
-            if r.get("reject") != "infra":
-                pairs.add((r["entry"], r["set"]))
+            k = (r["entry"], r["set"])
+            if r.get("reject") == "timeout":
+                timeouts[k] = timeouts.get(k, 0) + 1
+                if timeouts[k] >= 2:
+                    pairs.add(k)
+            elif r.get("reject") != "infra":
+                pairs.add(k)
     return pairs
 
 
