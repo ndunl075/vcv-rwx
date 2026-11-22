@@ -1,141 +1,154 @@
-"""Run candidate tests against the patched tree in a forked child and report which fail.
+"""Run tests against the patched tree with real pytest in a fresh process, the way the labels
+were made (pytest, SKIP_INTEGRATION=0), and report which of them are verified to pass.
 
-Workspace: a tree of symlinks into the pinned checkout where only the directories holding a
-changed file are real directories, so building it costs a few dozen syscalls and every
-unchanged source file keeps its compiled bytecode.
+The patched tree is a private directory under /tmp: every file of the pinned checkout is a hard
+link to one copy made at start-up (so unchanged modules keep their bytecode), and the patched
+files are written as new files.
 """
 import os
-import select
 import shutil
 import signal
+import subprocess
 import sys
+import threading
 import time
 
-from . import runner
-
 PINNED = os.environ.get("RWX_PINNED", "/opt/sqlglot")
-WS_BASE = os.environ.get("RWX_WS", "/tmp/rwx-ws")
+TMP = os.environ.get("RWX_TMP", "/tmp/rwx")
+PLUG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plug")
+TEST_TIMEOUT_S = 40          # pytest-timeout per test: a hanging test fails instead of blocking the run
+SLOW_S, SLOW_X = 5.0, 10.0   # a test slower than SLOW_S + SLOW_X * its recorded time is not "verified"
+
+_base_lock = threading.Lock()
+_base = None      # (root, {relative path: (mtime_ns, size)})
 
 
-def build_workspace(new_files, name="ws"):
-    """new_files: {relpath: bytes or None (deleted)}.  Returns the workspace root."""
-    ws = os.path.join(WS_BASE, name)
-    shutil.rmtree(ws, ignore_errors=True)
-    os.makedirs(ws)
-    dirs = {"": set()}  # real directories -> unused
-    for p in new_files:
-        parts = p.split("/")
-        for i in range(len(parts)):
-            dirs[""] = None
-            dirs["/".join(parts[:i])] = None
-    for d in sorted(dirs, key=lambda x: x.count("/")):
-        real = os.path.join(ws, d) if d else ws
-        os.makedirs(real, exist_ok=True)
-        src = os.path.join(PINNED, d) if d else PINNED
-        try:
-            names = os.listdir(src)
-        except FileNotFoundError:
-            names = []
+def _stat_tree(root):
+    st = {}
+    for d, _, names in os.walk(root):
         for n in names:
-            rel = (d + "/" + n) if d else n
-            if rel in dirs:
-                continue
-            tgt = os.path.join(real, n)
-            if not os.path.lexists(tgt):
-                os.symlink(os.path.join(src, n), tgt)
-    for p, content in new_files.items():
-        tgt = os.path.join(ws, p)
-        if os.path.lexists(tgt):
-            os.unlink(tgt)
-        if content is not None:
-            os.makedirs(os.path.dirname(tgt), exist_ok=True)
-            with open(tgt, "wb") as f:
-                f.write(content)
-    return ws
+            full = os.path.join(d, n)
+            s = os.lstat(full)
+            st[os.path.relpath(full, root)] = (s.st_mtime_ns, s.st_size)
+    return st
 
 
-def remove_workspace(ws):
-    shutil.rmtree(ws, ignore_errors=True)
+def base():
+    """The private copy of the pinned checkout; rebuilt if a test run changed a file in it."""
+    global _base
+    with _base_lock:
+        if _base is not None and _stat_tree(_base[0]) == _base[1]:
+            return _base[0]
+        root = os.path.join(TMP, "base")
+        shutil.rmtree(root, ignore_errors=True)
+        os.makedirs(TMP, exist_ok=True)
+        shutil.copytree(PINNED, root, symlinks=True, ignore=shutil.ignore_patterns(".git"))
+        _base = (root, _stat_tree(root))
+        return root
 
 
-def run_tests(ws, ids, warm=(), deadline=60.0, log=None):
-    """Run `ids` (test node ids, in suite order) in a child.  Returns {id: failed(bool)}.
+def build_tree(slot, new_files):
+    src = base()
+    root = os.path.join(TMP, "tree%d" % slot)
+    shutil.rmtree(root, ignore_errors=True)
+    for d, subdirs, names in os.walk(src):
+        rel = os.path.relpath(d, src)
+        dst = root if rel == "." else os.path.join(root, rel)
+        os.mkdir(dst)
+        for n in names:
+            os.link(os.path.join(d, n), os.path.join(dst, n), follow_symlinks=False)
+    for path, content in new_files.items():
+        full = os.path.join(root, path)
+        os.unlink(full)
+        with open(full, "wb") as f:
+            f.write(content)
+        # the bytecode of the pinned file must not be used for the patched one
+        d, n = os.path.split(full)
+        cache = os.path.join(d, "__pycache__")
+        if n.endswith(".py") and os.path.isdir(cache):
+            for c in os.listdir(cache):
+                if c.startswith(n[:-3] + "."):
+                    os.unlink(os.path.join(cache, c))
+    return root
 
-    A test that did not report before the deadline counts as failed.
-    """
-    for m in warm:
-        try:
-            __import__(m)
-        except Exception:
-            pass
-    keymap = {}
+
+class Result:
+    def __init__(self):
+        self.unverified = []       # ids that failed, or have no complete clean verdict
+        self.teardown_failed = []  # ids with a failing teardown report
+        self.wall = 0.0
+        self.note = ""
+
+
+def run(slot, new_files, ids, recorded, budget, log=None):
+    """Run `ids` (suite order) against the tree with `new_files`.  recorded: id -> seconds."""
+    res = Result()
+    res.unverified = list(ids)
+    t0 = time.monotonic()
+    root = build_tree(slot, new_files)
+    want = os.path.join(TMP, "want%d" % slot)
+    outp = os.path.join(TMP, "out%d" % slot)
+    with open(want, "w") as f:
+        f.write("\n".join(ids))
+    if os.path.exists(outp):
+        os.unlink(outp)
+    files = []
     for i in ids:
-        mod, cls, meth = runner.split_id(i)
-        keymap[(mod, cls, meth)] = i
-    r, w = os.pipe()
-    pid = os.fork()
-    if pid == 0:
-        try:
-            os.close(r)
-            os.setsid()
-            os.chdir(ws)
-            sys.path.insert(0, ws)
-            sys.dont_write_bytecode = True
-            os.environ["PYTHONPATH"] = ws
-            os.environ["SKIP_INTEGRATION"] = "0"
-            out = os.fdopen(w, "w", buffering=1)
-
-            def emit(k, failed):
-                out.write("%s::%s::%s\t%d\n" % (k[0], k[1], k[2], 1 if failed else 0))
-
-            runner.run_ids(ids, ws, emit)
-            out.close()
-        except BaseException:
-            pass
-        finally:
-            os._exit(0)
-    os.close(w)
-    result = {}
-    buf = b""
-    end = time.time() + deadline
+        f = i.split("::", 1)[0]
+        if f not in files:
+            files.append(f)
+    env = dict(os.environ)
+    env.update(PYTHONPATH=PLUG + os.pathsep + root, SKIP_INTEGRATION="0", PYTHONDONTWRITEBYTECODE="1",
+               RWX_WANT=want, RWX_OUT=outp)
+    cmd = [sys.executable, "-m", "pytest", "-p", "rwx_verdicts", "-p", "no:cacheprovider", "-q",
+           "--continue-on-collection-errors", "--timeout=%d" % TEST_TIMEOUT_S] + files
+    proc = subprocess.Popen(cmd, cwd=root, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, start_new_session=True)
     timed_out = False
-    with os.fdopen(r, "rb", buffering=0) as rf:
-        while True:
-            left = end - time.time()
-            if left <= 0:
-                timed_out = True
-                break
-            ready, _, _ = select.select([rf], [], [], min(left, 1.0))
-            if not ready:
-                continue
-            chunk = os.read(rf.fileno(), 65536)
-            if not chunk:
-                break
-            buf += chunk
-    if timed_out:
-        try:
-            os.killpg(pid, signal.SIGKILL)
-        except Exception:
-            pass
     try:
-        os.waitpid(pid, 0)
-    except Exception:
+        proc.wait(timeout=max(1.0, budget))
+    except subprocess.TimeoutExpired:
+        timed_out = True
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)  # also ends anything the tests left running
+    except OSError:
         pass
-    for line in buf.decode("utf-8", "replace").split("\n"):
-        if not line:
-            continue
-        try:
-            name, flag = line.rsplit("\t", 1)
-            mod, cls, meth = name.split("::")
-        except ValueError:
-            continue
-        i = keymap.get((mod, cls, meth))
-        if i is not None:
-            # a test can be reported twice (e.g. subtests): any failure sticks
-            result[i] = result.get(i, False) or flag == "1"
+    proc.wait()
+    res.wall = time.monotonic() - t0
+    reports = {}
+    ended = None
+    try:
+        with open(outp, "rb") as f:
+            lines = f.read().decode("utf-8", "replace").split("\n")
+    except OSError:
+        lines = []
+    for line in lines:
+        if line.startswith("R "):
+            parts = line.split(" ", 4)
+            if len(parts) == 5:
+                reports.setdefault(parts[4], []).append((parts[1], parts[2], float(parts[3])))
+        elif line.startswith("E "):
+            ended = line[2:].strip()
+    shutil.rmtree(root, ignore_errors=True)
+    if timed_out or ended not in ("0", "1"):
+        res.note = "timeout" if timed_out else "pytest ended with %r" % (ended,)
+        return res
+    unverified = []
     for i in ids:
-        if i not in result:
-            result[i] = True  # no verdict: treat as failed
-    if log:
-        log("verify: %d tests, timeout=%s" % (len(ids), timed_out))
-    return result
+        reps = reports.get(i, [])
+        whens = {w for w, _, _ in reps}
+        bad = any(o == "failed" for _, o, _ in reps)
+        skipped_in_setup = any(w == "setup" and o == "skipped" for w, o, _ in reps)
+        complete = "setup" in whens and "teardown" in whens and ("call" in whens or skipped_in_setup)
+        slow = sum(d for _, _, d in reps) > SLOW_S + SLOW_X * recorded.get(i, 0.0)
+        if bad or not complete or slow:
+            unverified.append(i)
+        if any(w == "teardown" and o == "failed" for w, o, _ in reps):
+            res.teardown_failed.append(i)
+    res.unverified = unverified
+    res.note = "pytest status %s" % ended
+    return res
+
+
+def cleanup():
+    shutil.rmtree(TMP, ignore_errors=True)

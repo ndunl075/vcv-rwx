@@ -1,4 +1,6 @@
 .work
 .git
-kit
 docs
+kit/sample
+tests
+**/__pycache__
