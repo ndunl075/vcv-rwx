@@ -25,6 +25,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import slots  # noqa: E402
 KIT = HERE.parent / "kit"
 DATA = Path.home() / "Developer/vcv-data/rwx"
 RESULTS = DATA / "results.jsonl"
@@ -149,7 +151,8 @@ def main():
     runs = []
     for i in range(a.runs):
         stem = f"{entry.replace('/', '_').replace(':', '_')}__{set_name}__{ts}__{i}"
-        res = run_once(a.image, snap, n, DATA / "runs", stem)
+        with slots.slot(2):  # the scorer gives an entry 2 cores: hold the whole budget
+            res = run_once(a.image, snap, n, DATA / "runs", stem)
         sc = score_run(res, tests, ans)
         res.update(sc)
         if not sc["reject"]:

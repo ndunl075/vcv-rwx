@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import slots  # noqa: E402
 KIT = HERE.parent / "kit"
 DATA = Path.home() / "Developer/vcv-data/rwx"
 RIV = Path.home() / "Developer/vcv-rivals/rwx"
@@ -137,7 +139,8 @@ def main():
                 if "scanned" not in st:
                     scan_notes(gd, entry)
                     st["scanned"] = True
-                status, sha = build(gd, image, entry)
+                with slots.slot(1):
+                    status, sha = build(gd, image, entry)
                 st.update({"status": status, "commit": sha, "built": time.strftime("%F %T")})
                 st_path.write_text(json.dumps(st))
                 print(f"{entry}: build {status}", flush=True)

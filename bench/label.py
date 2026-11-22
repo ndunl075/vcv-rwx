@@ -20,6 +20,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import slots  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 KIT = HERE.parent / "kit"
 IMAGES = {"native": "rwx-label:arm64", "amd64": "rwx-label:amd64"}
@@ -36,7 +39,7 @@ def docker_run(patch, platform, test_timeout=1500, nice=True, only=None):
     with tempfile.TemporaryDirectory(prefix="lbl-", dir=os.environ.get("LABEL_TMP", str(Path.home() / "Developer/vcv-data/rwx/tmp"))) as td:
         out = Path(td)
         os.chmod(out, 0o777)
-        cmd = ["docker", "run", "--rm", "--network", "none", "--memory", "3g",
+        cmd = ["docker", "run", "--rm", "--network", "none", "--memory", "3g", "--cpus", "1", "--cpu-shares", "256",
                "--tmpfs", "/w:exec,size=500m", "--tmpfs", "/tmp:exec,size=200m",
                "-e", f"TEST_TIMEOUT={test_timeout}",
                "-v", f"{HERE / 'inside'}:/bench:ro", "-v", f"{out}:/out"]
@@ -50,7 +53,8 @@ def docker_run(patch, platform, test_timeout=1500, nice=True, only=None):
         cmd += [image, "/bench/run_one.sh", "/in/patch" if patch is not None else "-", "/out/result.json"]
         if nice:
             cmd = ["nice", "-n", "10"] + cmd
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_TIMEOUT)
+        with slots.slot(1):
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=DOCKER_TIMEOUT)
         rj = out / "result.json"
         if not rj.exists():
             return {"no_result": True, "rc": p.returncode}, p.stderr[-800:]
