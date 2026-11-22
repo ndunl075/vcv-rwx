@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/qualify.py b/sqlglot/optimizer/qualify.py
+index 60e2255d8..39b408b7c 100644
+--- a/sqlglot/optimizer/qualify.py
++++ b/sqlglot/optimizer/qualify.py
+@@ -16,7 +16,7 @@ from sqlglot.schema import Schema, ensure_schema
+ from sqlglot._typing import E
+ 
+ 
+-def qualify(
++def qualify_(
+     expression: E,
+     dialect: DialectType = None,
+     db: str | None = None,
