@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/drill.py b/sqlglot/generators/drill.py
+index e39f40854..1316eb3c9 100644
+--- a/sqlglot/generators/drill.py
++++ b/sqlglot/generators/drill.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ 
++# café
+ from sqlglot import exp, generator, transforms
+ from sqlglot.dialects.dialect import (
+     datestrtodate_sql,

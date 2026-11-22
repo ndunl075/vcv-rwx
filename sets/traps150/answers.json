@@ -31746,6 +31746,70 @@
 "kind": "trap",
 "missing": [],
 "sub": "d_core_syntax"
+},
+"uei1": {
+"failing": [],
+"kind": "trap",
+"missing": [],
+"sub": "f_latin1_comment"
+},
+"ufwo": {
+"failing": [],
+"kind": "trap",
+"missing": [
+932,
+933,
+934,
+935,
+936,
+937,
+938,
+939,
+940,
+941,
+942,
+943,
+944,
+945,
+946,
+947,
+948,
+949,
+950,
+951,
+952,
+953,
+954
+],
+"sub": "g_deleted"
+},
+"ul8d": {
+"failing": [
+1106,
+1352,
+1355,
+1359,
+1369,
+1440,
+1441
+],
+"kind": "trap",
+"missing": [],
+"sub": "d_core_removed_name"
+},
+"uo6f": {
+"failing": [
+1490
+],
+"kind": "trap",
+"missing": [],
+"sub": "a_slow_tokenizer_size"
+},
+"vej0": {
+"failing": [],
+"kind": "trap",
+"missing": [],
+"sub": "g_bom"
 }
 }
 }

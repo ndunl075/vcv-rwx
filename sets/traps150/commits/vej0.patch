@@ -1,0 +1,10 @@
+diff --git a/sqlglot/generators/presto.py b/sqlglot/generators/presto.py
+index 5a0872a62..a8435fe4b 100644
+--- a/sqlglot/generators/presto.py
++++ b/sqlglot/generators/presto.py
+@@ -1,4 +1,4 @@
+-from __future__ import annotations
++﻿from __future__ import annotations
+ 
+ import typing as t
+ 
