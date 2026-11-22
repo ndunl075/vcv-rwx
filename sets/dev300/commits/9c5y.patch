@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/trino.py b/sqlglot/generators/trino.py
+index ab26886a6..9dfdc4b4c 100644
+--- a/sqlglot/generators/trino.py
++++ b/sqlglot/generators/trino.py
+@@ -80,7 +80,7 @@ class TrinoGenerator(PrestoGenerator):
+             if has_array:
+                 array = (
+                     exp.ArrayConcat(this=arrays[0], expressions=arrays[1:])
+-                    if len(arrays) > 1
++                    if len(arrays) > 2
+                     else arrays[0]
+                 )
+                 return self.func("CONCAT_WS", expression.expressions[0], array)

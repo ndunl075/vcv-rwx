@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/spark.py b/sqlglot/parsers/spark.py
+index 797c71fc1..4b1693512 100644
+--- a/sqlglot/parsers/spark.py
++++ b/sqlglot/parsers/spark.py
+@@ -53,7 +53,7 @@ def _build_dateadd(args: list) -> exp.Expr:
+ 
+ 
+ class SparkParser(Spark2Parser):
+-    DECIMAL_LITERALS_ALLOW_NEGATIVE_SCALE = False
++    DECIMAL_LITERALS_ALLOW_NEGATIVE_SCALE = True
+ 
+     NO_PAREN_FUNCTIONS = {
+         **Spark2Parser.NO_PAREN_FUNCTIONS,

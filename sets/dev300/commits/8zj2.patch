@@ -1,0 +1,25 @@
+diff --git a/sqlglot/dialects/risingwave.py b/sqlglot/dialects/risingwave.py
+index f31925951..97862b9fb 100644
+--- a/sqlglot/dialects/risingwave.py
++++ b/sqlglot/dialects/risingwave.py
+@@ -17,7 +17,7 @@ class RisingWave(Postgres):
+     class Tokenizer(Postgres.Tokenizer):
+         KEYWORDS = {
+             **Postgres.Tokenizer.KEYWORDS,
+-            "SINK": TokenType.SINK,
++            "SINKx": TokenType.SINK,
+             "SOURCE": TokenType.SOURCE,
+         }
+ 
+diff --git a/sqlglot/expressions/query.py b/sqlglot/expressions/query.py
+index 9f28e1ce6..2492725aa 100644
+--- a/sqlglot/expressions/query.py
++++ b/sqlglot/expressions/query.py
+@@ -1491,6 +1491,7 @@ class Select(Expression, Query):
+         try:
+             expression = maybe_parse(expression, into=Join, prefix="JOIN", **parse_args)
+         except ParseError:
++            # Handled by the caller
+             expression = maybe_parse(expression, into=(Join, Expr), **parse_args)
+ 
+         join = expression if isinstance(expression, Join) else Join(this=expression, kind="CROSS")

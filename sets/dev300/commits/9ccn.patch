@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index c4e442b4b..969a5fdde 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -363,7 +363,7 @@ from
+                         and (
+                                 (n1.n_name = 'FRANCE' and n2.n_name = 'GERMANY')
+                                 or (n1.n_name = 'GERMANY' and n2.n_name = 'FRANCE')
+-                        )
++                        ))
+                         and CAST(l_shipdate AS DATE) between date '1995-01-01' and date '1996-12-31'
+         ) as shipping
+ group by

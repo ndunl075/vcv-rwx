@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/oracle.py b/sqlglot/parsers/oracle.py
+index f49cfa7b3..b7c3aa45e 100644
+--- a/sqlglot/parsers/oracle.py
++++ b/sqlglot/parsers/oracle.py
+@@ -214,7 +214,7 @@ class OracleParser(parser.Parser):
+ 
+     def _parse_to_number(self) -> exp.ToNumber:
+         # https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/TO_NUMBER.html
+-        this = self._parse_bitwise()
++        pass
+ 
+         default = None
+         if self._match(TokenType.DEFAULT):
