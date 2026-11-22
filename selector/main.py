@@ -24,6 +24,7 @@ T0 = time.monotonic()
 HEAVY_MS = 2500        # a test this slow is never run here
 RUN_START_S = {"hot": 0.5, "cold": 3.0}   # fixed CPU of one run in a child of the warm servers (board seconds)
 RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
+POOL_FACTOR = 3        # a pool test's recorded time is wall time of several workers
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
 COLD_EXTRA_S = 4.0     # a test whose own process costs this much more CPU than an empty test is not run (spawn pools)
@@ -77,9 +78,11 @@ class Ctx:
         self.lnum_at = [self.num_of.get(i) for i in lm.ids]
         self.always |= {n for n in self.all if n not in {m for m in self.lnum_at if m is not None}}
         # a test that starts worker processes pays for every worker's start-up: never run here
+        # a test that starts pool workers pays for every worker's start-up in a cold run; a hot run forks them
+        self.pool = {self.lnum_at[i] for i in lm.pool if self.lnum_at[i] is not None and self.ms[self.lnum_at[i]] < HEAVY_MS}
         self.runnable -= {self.lnum_at[i] for i in lm.pool if self.lnum_at[i] is not None}
-        # children of a hot run would import the pinned tree: tests that start processes run cold only
-        self.spawn = {self.lnum_at[i] for i in lm.spawn if self.lnum_at[i] is not None} | self.always
+        # a subprocess started by a test of a hot run would import the pinned tree: such tests run cold only
+        self.spawn = ({self.lnum_at[i] for i in lm.spawn if self.lnum_at[i] is not None} | self.always) - self.pool
 
         self.sm = None
         self.state_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps", "state.json.gz")
@@ -382,8 +385,9 @@ def decide(c, p, loaded):
     prove_slow(c, p)
     cand = sorted(p.cand)
     p.mode = "hot" if hot_ok(c, p, loaded) else "cold"
-    unrun = [n for n in cand if n not in c.runnable or n in p.unrun]
-    rest = [n for n in cand if n in c.runnable and n not in p.unrun]
+    can_run = c.runnable | c.pool if p.mode == "hot" else c.runnable
+    unrun = [n for n in cand if n not in can_run or n in p.unrun]
+    rest = [n for n in cand if n in can_run and n not in p.unrun]
     # workers that the unrun candidates pay for anyway take other candidates for free
     bins = pack.pack(items(c, unrun))[1]
     before = {n for b in bins for n, _ in b}
@@ -393,9 +397,11 @@ def decide(c, p, loaded):
     listed = unrun + sorted(free)
     if p.mode == "hot" and any(n in c.spawn for n in rest):
         p.mode = "cold"
+        listed += [n for n in rest if n in c.pool]
+        rest = [n for n in rest if n not in c.pool]
     if rest:
         list_cost = pack.cost_of(items(c, cand)) / 1000.0
-        run_cost = (RUN_START_S[p.mode] + RUN_FACTOR * sum(c.ms[n] for n in rest) / 1000.0
+        run_cost = (RUN_START_S[p.mode] + RUN_FACTOR * sum(c.ms[n] * (POOL_FACTOR if n in c.pool else 1) for n in rest) / 1000.0
                     + (EXECUTOR_SETUP_S if any(c.file_of[n] == "tests/test_executor.py" for n in rest) else 0.0)
                     + pack.cost_of(items(c, listed)) / 1000.0 + (RUN_LEFTOVER_S if not listed else 0.0))
         p.notes.append("list %.1f run %.1f (%s)" % (list_cost, run_cost, p.mode))

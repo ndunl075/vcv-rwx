@@ -237,6 +237,21 @@ def hot_apply(job, base, index, loaded):
         importlib.invalidate_caches()
 
 
+def fork_pools():
+    """In a hot child, process pools fork their workers instead of spawning fresh interpreters: a spawned
+    worker would import the pinned tree again, a forked one holds the patched code of this child (and
+    costs no start-up).  Tasks still cross a process boundary, pickled both ways, as in a spawned pool."""
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor
+
+    init = ProcessPoolExecutor.__init__
+
+    def forked(self, max_workers=None, mp_context=None, initializer=None, initargs=(), **kwargs):
+        init(self, min(max_workers or 2, 2), multiprocessing.get_context("fork"), initializer, initargs, **kwargs)
+
+    ProcessPoolExecutor.__init__ = forked
+
+
 class Hot:
     """pytest plugin of the hot server: when collection is done, serve; a child runs its job's tests."""
 
@@ -266,6 +281,7 @@ class Hot:
             with open(job["out"], "a") as f:
                 f.write("H %s: %s\n" % (type(e).__name__, e))
             os._exit(3)
+        fork_pools()
         want = set(job["ids"])
         session.items[:] = [i for i in session.items if i.nodeid in want]
         self.verdicts.open(job["out"], None)
