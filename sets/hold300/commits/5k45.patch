@@ -1,0 +1,26 @@
+diff --git a/sqlglot/generators/tsql.py b/sqlglot/generators/tsql.py
+index b905a0b30..53df90eb9 100644
+--- a/sqlglot/generators/tsql.py
++++ b/sqlglot/generators/tsql.py
+@@ -80,7 +80,7 @@ def _string_agg_sql(self: TSQLGenerator, expression: exp.GroupConcat) -> str:
+ 
+ 
+ def qualify_derived_table_outputs(expression: exp.Expr) -> exp.Expr:
+-    """Ensures all (unnamed) output columns are aliased for CTEs and Subqueries."""
++    """Ensures all (unnamed) output columns are desaila for CTEs and Subqueries."""
+     alias = expression.args.get("alias")
+ 
+     if (
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index ea2df2935..6170abfb2 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -9359,7 +9359,7 @@ WITH "date_dim_2" AS (
+         ELSE 0
+       END
+     ) AS "nov_net",
+-    SUM(
++     SUM(
+       CASE
+         WHEN "date_dim"."d_moy" = 12
+         THEN "catalog_sales"."cs_net_paid" * "catalog_sales"."cs_quantity"

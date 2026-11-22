@@ -1,0 +1,13 @@
+diff --git a/sqlglot/planner.py b/sqlglot/planner.py
+index cdf8bbda9..aa897400d 100644
+--- a/sqlglot/planner.py
++++ b/sqlglot/planner.py
+@@ -16,7 +16,7 @@ class Plan:
+         with_: exp.With | None = self.expression.args.get("with_")
+         self.ctes: exp.With | None = with_.copy() if with_ is not None else None
+         self.root: Step = Step.from_expression(self.expression)
+-        self._dag: dict[Step, set[Step]] = {}
++        self._dag: dict[Step, set[Step]] = {}  # Order matters here
+ 
+     @property
+     def dag(self) -> dict[Step, set[Step]]:

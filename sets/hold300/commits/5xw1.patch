@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/oracle.py b/sqlglot/dialects/oracle.py
+index 9330c033e..efe99fb18 100644
+--- a/sqlglot/dialects/oracle.py
++++ b/sqlglot/dialects/oracle.py
+@@ -20,7 +20,7 @@ class Oracle(Dialect):
+     LOCKING_READS_SUPPORTED = True
+     TABLESAMPLE_SIZE_IS_PERCENT = True
+     NULL_ORDERING = "nulls_are_large"
+-    ON_CONDITION_EMPTY_BEFORE_ERROR = False
++    ON_CONDITION_EMPTY_BEFORE_ERROR = True
+     ALTER_TABLE_ADD_REQUIRED_FOR_EACH_COLUMN = False
+     DISABLES_ALIAS_REF_EXPANSION = True
+     INTERSECT_BINDS_TIGHTER_THAN_UNION_AND_EXCEPT = False

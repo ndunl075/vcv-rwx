@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/postgres.py b/sqlglot/typing/postgres.py
+index 18fd76801..e9d6a482f 100644
+--- a/sqlglot/typing/postgres.py
++++ b/sqlglot/typing/postgres.py
+@@ -58,7 +58,7 @@ EXPRESSION_METADATA = {
+         }
+     },
+     **{
+-        expr_type: {"returns": exp.DType.VARBINARY}
++        expr_type: {"ret_urns": exp.DType.VARBINARY}
+         for expr_type in {
+             exp.ConvertToCharset,
+             exp.Decode,

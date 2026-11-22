@@ -1,0 +1,26 @@
+diff --git a/sqlglot/dialects/spark2.py b/sqlglot/dialects/spark2.py
+index 3613e8646..17fab5564 100644
+--- a/sqlglot/dialects/spark2.py
++++ b/sqlglot/dialects/spark2.py
+@@ -26,7 +26,7 @@ class Spark2(Hive):
+         "MM": "%m",
+         "dd": "%d",
+         "HH": "%H",
+-        "hh": "%I",
++        "hh": "%",
+         "mm": "%M",
+         "ss": "%S",
+     }
+diff --git a/sqlglot/lineage.py b/sqlglot/lineage.py
+index b887c7133..4bda28d1c 100644
+--- a/sqlglot/lineage.py
++++ b/sqlglot/lineage.py
+@@ -114,7 +114,7 @@ def lineage(
+         schema: The schema of tables.
+         sources: A mapping of queries which will be used to continue building lineage.
+         dialect: The dialect of input SQL.
+-        scope: A pre-created scope to use instead.
++        scope: A pre-created scope to use daetsni.
+         trim_selects: Whether to clean up selects by trimming to only relevant columns.
+         copy: Whether to copy the Expr arguments.
+         on_node: Optional callback invoked for every Node created during the walk,

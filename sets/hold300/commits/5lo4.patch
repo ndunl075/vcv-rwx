@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/mysql.py b/sqlglot/typing/mysql.py
+index 16111a53c..771fb9f59 100644
+--- a/sqlglot/typing/mysql.py
++++ b/sqlglot/typing/mysql.py
+@@ -40,7 +40,7 @@ def _annotate_reverse(self: TypeAnnotator, expression: exp.Reverse) -> exp.Rever
+     if expression.this.is_type(exp.DType.BINARY, exp.DType.VARBINARY, exp.DType.UNKNOWN):
+         self._annotate_by_args(expression, "this")
+     else:
+-        self._set_type(expression, exp.DType.VARCHAR)
++        pass
+ 
+     return expression
+ 

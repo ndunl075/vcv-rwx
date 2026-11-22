@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/eliminate_ctes.sql b/tests/fixtures/optimizer/eliminate_ctes.sql
+index 8e4e30be1..616d0c01d 100644
+--- a/tests/fixtures/optimizer/eliminate_ctes.sql
++++ b/tests/fixtures/optimizer/eliminate_ctes.sql
+@@ -105,7 +105,7 @@ WITH q AS (
+     a
+   FROM y
+ )
+-SELECT
++SELECT DISTINCT
+   a
+ FROM q2 AS q
+ WHERE

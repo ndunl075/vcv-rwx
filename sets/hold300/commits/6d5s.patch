@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/dax.py b/sqlglot/generators/dax.py
+index 6fc09e8b2..a933842e4 100644
+--- a/sqlglot/generators/dax.py
++++ b/sqlglot/generators/dax.py
+@@ -3,5 +3,5 @@ from __future__ import annotations
+ from sqlglot import generator
+ 
+ 
+-class DAXGenerator(generator.Generator):
++class DAXGenerator(generator.Generator):  # See the dialect docs
+     AFTER_HAVING_MODIFIER_TRANSFORMS = generator.AFTER_HAVING_MODIFIER_TRANSFORMS

@@ -2113,6 +2113,128 @@
 "kind": "code",
 "missing": [],
 "sub": "op"
+},
+"5k0a": {
+"failing": [
+636
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"5k45": {
+"failing": [
+1440
+],
+"kind": "multi",
+"missing": [],
+"sub": "2files"
+},
+"5lo4": {
+"failing": [
+1295
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"5xw1": {
+"failing": [
+523
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"61nc": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "default"
+},
+"67xe": {
+"failing": [
+1324
+],
+"kind": "fixture",
+"missing": [],
+"sub": "typo"
+},
+"6d5s": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "trailing"
+},
+"6fiq": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "trailing"
+},
+"6i04": {
+"failing": [
+1324
+],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"6jv8": {
+"failing": [
+567,
+1295
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"6ly1": {
+"failing": [],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"6zv5": {
+"failing": [
+818
+],
+"kind": "code",
+"missing": [],
+"sub": "num"
+},
+"75f7": {
+"failing": [
+1568
+],
+"kind": "multi",
+"missing": [],
+"sub": "2files"
+},
+"7e0f": {
+"failing": [
+1325
+],
+"kind": "fixture",
+"missing": [],
+"sub": "line_del"
+},
+"7mla": {
+"failing": [
+203,
+204
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"7mt6": {
+"failing": [
+1420
+],
+"kind": "fixture",
+"missing": [],
+"sub": "dup"
 }
 }
 }
