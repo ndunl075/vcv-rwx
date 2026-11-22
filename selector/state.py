@@ -15,6 +15,7 @@ import gzip
 import hashlib
 import importlib
 import json
+import logging
 import os
 import re
 import sys
@@ -106,6 +107,8 @@ class Snap:
             extra = fp(v.__dict__) if v.__dict__ else ""
             return digest("func", v.__module__ or "", v.__qualname__, self.code(v.__code__), fp(v.__defaults__),
                           fp(v.__kwdefaults__), self.join(cells), extra)
+        if isinstance(v, logging.Logger):
+            return "logger:%s" % v.name   # its handlers and manager are process-wide state, not sqlglot's
         if t is types.MethodType:
             return digest("method", fp(v.__func__), fp(v.__self__))
         if t is classmethod or t is staticmethod:
@@ -321,6 +324,10 @@ def main():
     raw = sys.argv[1] == "--raw"
     args = sys.argv[2:] if raw else sys.argv[1:]
     tree, out = args
+    try:
+        import pytest  # noqa: F401  the servers that run the comparison have it loaded (sqlglot.expressions.UNITTEST)
+    except ImportError:
+        pass
     os.chdir(tree)
     sys.path.insert(0, tree)
     snap = snapshot(tree)
