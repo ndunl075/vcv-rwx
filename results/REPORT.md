@@ -1,12 +1,12 @@
 # RWX Blast Radius: benchmark report
 
-Generated 2026-11-22 09:55:34. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
+Generated 2026-11-22 10:05:07. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
 
-Patches per set: sample 30, dev300 103
+Patches per set: sample 30, dev300 103, traps150 117
 
 | # | entry | sample total | sample miss | dev300 total | dev300 miss | hold300 total | hold300 miss | odd200 total | odd200 miss | traps150 misses by sub-kind |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | jason-scheffel__nap-time | 98.1 | 0 | 3509.4 | 10 |  |  |  |  |  |
+| 1 | jason-scheffel__nap-time | 98.1 | 0 | 3509.4 | 10 |  |  |  |  | 3197.0 s; 1 miss: trap/f_nul_comment 1 |
 | 2 | vs-githjk__fog-of-war | 105.0 | 0 | 3578.6 | 9 |  |  |  |  |  |
 | 3 | AbhinavDasari-pennstate__fog-of-war-ab | 104.7 | 0 | 3579.9 | 9 |  |  |  |  |  |
 | 4 | vineetsista__rwx-blast-radius | 122.2 | 0 | 3591.3 | 10 |  |  |  |  |  |
@@ -17,8 +17,9 @@ Patches per set: sample 30, dev300 103
 | 9 | buidangnguyen05__builders-buildathon-blast-radius | 134.8 | 0 | 3879.0 | 10 |  |  |  |  |  |
 | 10 | JuanQuenga__buildathon-blast-radius | 99.7 | 0 | 3883.6 | 10 |  |  |  |  |  |
 | 11 | joshuamuellenbach25__RWX---Blast-Radius | 145.4 | 0 | 3986.8 | 10 |  |  |  |  |  |
-| 12 | ours-d981f91 | 143.7 | 0 | 4064.5 | 10 |  |  |  |  |  |
-| 13 | starter | 1211.9 | 0 |  |  |  |  |  |  |  |
+| 12 | ours-869909b | 137.6 | 0 | 4020.1 | 10 |  |  |  |  | 2933.6 s; 0 miss: - |
+| 13 | ours-d981f91 | 143.7 | 0 | 4064.5 | 10 |  |  |  |  |  |
+| 14 | starter | 1211.9 | 0 |  |  |  |  |  |  |  |
 
 ## sample
 
@@ -34,6 +35,7 @@ Patches per set: sample 30, dev300 103
 | vineetsista__rwx-blast-radius | 122.2 | 106.0 | 16.2 | 0 | - | code 140, comment 0, fixture 1, multi 3 |
 | yvngacx6__buildathon-rwx | 132.9 | 118.5 | 14.4 | 0 | - | code 30, comment 0, fixture 1, multi 2 |
 | buidangnguyen05__builders-buildathon-blast-radius | 134.8 | 132.6 | 2.2 | 0 | - | code 34, comment 0, fixture 2, multi 3 |
+| ours-869909b | 137.6 | 129.2 | 8.4 | 0 | - | code 160, comment 0, fixture 1, multi 40 |
 | ours-d981f91 | 143.7 | 122.5 | 21.2 | 0 | - | code 159, comment 0, fixture 1, multi 40 |
 | joshuamuellenbach25__RWX---Blast-Radius | 145.4 | 120.5 | 24.9 | 0 | - | code 29, comment 0, fixture 1, multi 2 |
 | starter | 1211.9 | 1210.5 | 1.4 | 0 | - | code 1620, comment 1620, fixture 1620, multi 1620 |
@@ -53,7 +55,15 @@ Patches per set: sample 30, dev300 103
 | buidangnguyen05__builders-buildathon-blast-radius | 3879.0 | 3872.6 | 6.4 | 10 | code 3, comment 1, fixture 4, multi 2 | code 119, comment 0, fixture 12, multi 103 |
 | JuanQuenga__buildathon-blast-radius | 3883.6 | 3734.8 | 148.8 | 10 | code 3, comment 1, fixture 4, multi 2 | code 442, comment 0, fixture 80, multi 573 |
 | joshuamuellenbach25__RWX---Blast-Radius | 3986.8 | 3947.6 | 39.1 | 10 | code 4, comment 1, fixture 4, multi 1 | code 290, comment 0, fixture 11, multi 380 |
+| ours-869909b | 4020.1 | 3974.9 | 45.1 | 10 | code 3, comment 1, fixture 4, multi 2 | code 332, comment 0, fixture 154, multi 1039 |
 | ours-d981f91 | 4064.5 | 3957.2 | 107.2 | 10 | code 3, comment 1, fixture 4, multi 2 | code 330, comment 0, fixture 154, multi 1039 |
+
+## traps150
+
+| entry | total | simulated | CPU | misses | misses by kind | over-selection (avg tests selected per kind) |
+|---|---|---|---|---|---|---|
+| ours-869909b | 2933.6 | 2897.6 | 36.0 | 0 | - | trap 1085 |
+| jason-scheffel__nap-time | 3197.0 | 3149.0 | 48.1 | 1 | trap 1 | trap 1035 |
 
 ## Text aimed at AI tools found in rival repos (data, not followed)
 
