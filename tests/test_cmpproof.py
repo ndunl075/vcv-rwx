@@ -435,5 +435,61 @@ class PackTests(unittest.TestCase):
             self.assertTrue(m.same_outcome(self.IDS[0], "sqlglot/x.py:1:1:1:9", "Lt", "LtE"))
 
 
+class ValidatorTests(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, os.path.join(ROOT, "tools", "cmpmap"))
+        import validate
+        self.v = validate
+
+    class CM:
+        tests = {"tests/a.py::A::t": 0, "tests/a.py::A::u": 1, "tests/b.py::B::v": 2}
+
+    def test_failing_tests_reads_subtests_and_file_level_errors(self):
+        txt = ("FAILED tests/b.py::B::v - x\nERROR tests/a.py - boom\n"
+               "SUBFAILED[431, DATE_TRUNC(x, WEEK) > CAST('2008' AS DATE)] tests/test_optimizer.py::TestOptimizer::test_simplify\n"
+               "SUBFAILED(x=1) tests/z.py::Z::t - err\n")
+        got = self.v.failing_tests(txt, self.CM())
+        self.assertIn("tests/a.py::A::t", got)      # a collection error of the file fails every test of it
+        self.assertIn("tests/a.py::A::u", got)
+        self.assertIn("tests/b.py::B::v", got)
+        self.assertIn("tests/test_optimizer.py::TestOptimizer::test_simplify", got)
+        self.assertIn("tests/z.py::Z::t", got)
+
+    def test_check_goes_through_single_compare_swap_and_survives_empty_output(self):
+        old = "def f(a, b):\n    return a < b\n"
+        with tempfile.TemporaryDirectory() as d:
+            root, out = os.path.join(d, "root"), os.path.join(d, "out")
+            os.makedirs(os.path.join(root, "sqlglot"))
+            open(os.path.join(root, "sqlglot", "x.py"), "w").write(old)
+            site = "sqlglot/x.py:2:11:2:16"
+            mp = os.path.join(d, "m.json.gz")
+            with gzip.open(mp, "wt") as f:
+                json.dump({"ids": list(self.CM.tests), "bad": [], "sets": [[]], "sites": {"sqlglot/x.py": {"2:11:2:16": ["Lt", 0, 0]}}}, f)
+
+            def swap(name, new, pytest_txt, **meta):
+                os.makedirs(os.path.join(out, name))
+                open(os.path.join(out, name, "file.py"), "w").write(new)
+                json.dump(dict({"site": site, "old": "Lt", "new": "LtE", "path": "sqlglot/x.py"}, **meta), open(os.path.join(out, name, "meta.json"), "w"))
+                open(os.path.join(out, name, "pytest.txt"), "w").write(pytest_txt)
+
+            swap("empty", "def f(a, b):\n    return a <= b\n", "")                               # no IndexError
+            swap("miss", "def f(a, b):\n    return a <= b\n", "ERROR tests/a.py - boom\n== 1 error in 1.0s ==\n")   # file level error: MISSED
+            swap("ok", "def f(a, b):\n    return a <= b\n", "== 3 passed in 1.0s ==\n")
+            swap("moved", "def f(a, b):\n    return a <= b\n", "== 3 passed in 1.0s ==\n", site="sqlglot/x.py:2:12:2:17")   # meta disagrees
+            swap("refused", "def f(a, b):\n    return a <= b + 1\n", "== 3 passed in 1.0s ==\n")
+            import io
+            from contextlib import redirect_stdout
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.v.check(mp, out, root)
+            text = buf.getvalue()
+            self.assertIn("empty", text)
+            self.assertRegex(text, r"miss .* MISSED")
+            self.assertRegex(text, r"ok .* ok")
+            self.assertRegex(text, r"moved .* MISMATCH")
+            self.assertRegex(text, r"refused .* refuses")
+            self.assertIn("missed swaps: 2", text)
+
+
 if __name__ == "__main__":
     unittest.main()

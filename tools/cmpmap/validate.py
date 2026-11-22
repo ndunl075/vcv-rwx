@@ -3,7 +3,7 @@ check that no test the map claims to run as before fails.
 
     validate.py pick <map> <pinned source root> <out dir> <n> <seed>     writes <out>/<name>/{file.py,meta.json}
     validate.py run  <out dir> <name> [<name> ...]                       runs each in the labeling image (docker, native)
-    validate.py check <map> <out dir>                                    prints claimed / failing per swap
+    validate.py check <map> <out dir> <pinned source root>               prints claimed / failing per swap
 
 The swapped source goes through selector.cmpproof.single_compare_swap, so the refusals are exercised too.
 """
@@ -80,13 +80,43 @@ def run(out, names):
     for name in names:
         meta = json.load(open(os.path.join(out, name, "meta.json")))
         script = ("set -e; rm -rf /v; cp -a /clean /v; cp /out/%s/file.py /v/%s; cd /v; "
-                  "SKIP_INTEGRATION=0 PYTHONDONTWRITEBYTECODE=1 python -m pytest tests -q -p no:cacheprovider -rfE -x --maxfail=100000 "
+                  "SKIP_INTEGRATION=0 PYTHONDONTWRITEBYTECODE=1 python -m pytest tests -q -p no:cacheprovider -rfE --maxfail=100000 "
                   "> /out/%s/pytest.txt 2>&1 || true" % (name, meta["path"], name))
         subprocess.run(["docker", "run", "--rm", "--cpus", "1", "--user", "0", "-v", os.path.abspath(out) + ":/out", "rwx-label:native", "sh", "-c", script])
         print("ran", name, flush=True)
 
 
-def check(mp, out):
+def failing_tests(txt, cm):
+    """The tests that failed in a pytest -rfE summary.  A collection error (`ERROR tests/x.py`) names a file, not a test:
+    it fails every test of the file."""
+    failing = set()
+    for line in txt.splitlines():
+        if line.startswith("SUBFAIL"):
+            # `SUBFAILED[label with spaces] tests/x.py::Class::test` (the label comes first)
+            got = re.findall(r"\S+\.py::\S+", line)
+            if got:
+                failing.add(got[-1].split(" - ")[0])
+            continue
+        m = re.match(r"(?:FAILED|ERROR) (\S+)", line)
+        if not m:
+            continue
+        name = m.group(1)
+        if "::" in name:
+            failing.add(name)
+        else:
+            failing |= {t for t in cm.tests if t.split("::")[0] == name}
+            failing.add(name)
+    return failing
+
+
+def finished(txt):
+    lines = [l for l in txt.splitlines() if l.strip()]
+    return bool(lines) and bool(re.search(r"\b(passed|failed|error|errors)\b.* in [\d.]+s", lines[-1]))
+
+
+def check(mp, out, root):
+    """`root` is the pinned source tree: the swap is derived from the real patched file by selector.cmpproof, exactly
+    as the selector does it, and the map is queried with what it returns."""
     cm = cmpproof.CmpMap(mp)
     bad = 0
     for name in sorted(os.listdir(out)):
@@ -94,13 +124,27 @@ def check(mp, out):
         if not os.path.exists(p):
             continue
         meta = json.load(open(os.path.join(out, name, "meta.json")))
-        txt = open(p).read()
-        failing = set(re.findall(r"^(?:FAILED|ERROR|SUBFAIL\w*) (\S+)", txt, re.M))
-        failing = {f.split(" - ")[0] for f in failing}
-        claimed = sum(1 for t in cm.tests if cm.same_outcome(t, meta["site"], meta["old"], meta["new"]))
-        wrong = [f for f in failing if cm.same_outcome(f, meta["site"], meta["old"], meta["new"])]
-        done = "passed" in txt.splitlines()[-1] or "failed" in txt.splitlines()[-1] if txt.strip() else False
-        print(name, meta["site"], meta["old"], "->", meta["new"], "claimed", claimed, "failing", len(failing), "MISSED" if wrong else "ok", "" if done else "(unfinished)", wrong[:3])
+        txt = open(p, errors="replace").read()
+        if not txt.strip():
+            print(name, meta["site"], "no pytest output (unfinished)")
+            continue
+        with open(os.path.join(root, meta["path"]), encoding="utf-8") as f:
+            old = f.read()
+        with open(os.path.join(out, name, "file.py"), encoding="utf-8") as f:
+            new = f.read()
+        swap = cmpproof.single_compare_swap(old, new, meta["path"])
+        if swap is None:
+            print(name, meta["site"], "the selector refuses this swap: nothing to check")
+            continue
+        if swap[0] != meta["site"] or (swap[1], swap[2]) != (meta["old"], meta["new"]):
+            bad += 1
+            print(name, meta["site"], "MISMATCH: single_compare_swap says", swap)
+            continue
+        failing = failing_tests(txt, cm)
+        claimed = sum(1 for t in cm.tests if cm.same_outcome(t, *swap))
+        wrong = sorted(f for f in failing if cm.same_outcome(f, *swap))
+        print(name, swap[0], swap[1], "->", swap[2], "claimed", claimed, "failing", len(failing), "MISSED" if wrong else "ok",
+              "" if finished(txt) else "(unfinished)", wrong[:3])
         bad += bool(wrong)
     print("missed swaps:", bad)
 
@@ -112,4 +156,4 @@ if __name__ == "__main__":
     elif c == "run":
         run(sys.argv[2], sys.argv[3:])
     else:
-        check(sys.argv[2], sys.argv[3])
+        check(sys.argv[2], sys.argv[3], sys.argv[4])
