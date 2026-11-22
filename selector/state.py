@@ -18,6 +18,7 @@ hold the same mutable object are told apart from two that hold equal copies; an 
 """
 import enum
 import functools
+import gc
 import gzip
 import hashlib
 import importlib
@@ -406,7 +407,9 @@ def snapshot(tree, translate=None):
                 else:
                     out[head + k] = entry(head + k, "f", v, where(v, base))
             out[head + "<structure>"] = "x " + text(snap.digest(*struct))
-    # what no namespace owns
+    # what no namespace owns.  Classes are cyclic garbage once dropped: only the live ones count, not whichever
+    # temporary class this process has not yet collected
+    gc.collect()
     found, loose = orphans(owned, snap.strays)
     for cls, got in found.items():
         out["O\t%s\t%s" % (cls.__module__, cls.__qualname__)] = "o " + text(snap.orphans(got))

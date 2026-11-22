@@ -134,6 +134,24 @@ class Dynamic(unittest.TestCase):
         self.assertIn("O\tsqlglot.tok\tTok", a)
 
 
+    def test_dropped_classes_do_not_count(self):
+        # a temporary class is cyclic garbage until the collector runs: whether it is still a subclass must not
+        # depend on when that was
+        files = dict(DYN)
+        del files["sqlglot/use.py"]
+        files["sqlglot/temp.py"] = """
+            import gc
+            from sqlglot.dyn import make
+            from sqlglot.tok import Tok
+
+            gc.disable()
+            _t = make(Tok)
+            del _t
+        """
+        snap = slotkit.snap(slotkit.make_tree(files))
+        self.assertEqual([k for k in snap if k[0] == "O"], [])
+
+
 class Blind(unittest.TestCase):
     """What the fingerprints cannot vouch for is never "unchanged"."""
 
