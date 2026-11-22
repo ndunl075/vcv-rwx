@@ -1,0 +1,26 @@
+diff --git a/sqlglot/dialects/athena.py b/sqlglot/dialects/athena.py
+index 626406687..247db1fb9 100644
+--- a/sqlglot/dialects/athena.py
++++ b/sqlglot/dialects/athena.py
+@@ -81,7 +81,7 @@ class Athena(Trino):
+             except TokenError:
+                 trino_tokens = None
+ 
+-            if trino_tokens is not None and not _may_be_hive(trino_tokens):
++            if trino_tokens is None and not _may_be_hive(trino_tokens):
+                 return trino_tokens
+ 
+             try:
+diff --git a/sqlglot/optimizer/canonicalize.py b/sqlglot/optimizer/canonicalize.py
+index ac8a541aa..ca949bbae 100644
+--- a/sqlglot/optimizer/canonicalize.py
++++ b/sqlglot/optimizer/canonicalize.py
+@@ -139,7 +139,7 @@ def remove_redundant_casts(expression: exp.Expr) -> exp.Expr:
+         isinstance(expression, (exp.Date, exp.TsOrDsToDate))
+         and expression.this.type
+         and expression.this.type.this == exp.DType.DATE
+-        and not expression.this.type.expressions
++        or not expression.this.type.expressions
+     ):
+         return exp.paren(expression.this, copy=False)
+ 

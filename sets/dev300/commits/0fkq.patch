@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/isolate_table_selects.py b/sqlglot/optimizer/isolate_table_selects.py
+index 62ad8ed54..c972c08eb 100644
+--- a/sqlglot/optimizer/isolate_table_selects.py
++++ b/sqlglot/optimizer/isolate_table_selects.py
+@@ -29,7 +29,7 @@ def isolate_table_selects(
+ 
+             if (
+                 not isinstance(source, exp.Table)
+-                or not schema.column_names(source)
++                or schema.column_names(source)
+                 or isinstance(source.parent, exp.Subquery)
+                 or isinstance(source.parent.parent, exp.Table)
+             ):

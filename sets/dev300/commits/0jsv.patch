@@ -1,0 +1,13 @@
+diff --git a/sqlglot/errors.py b/sqlglot/errors.py
+index 3e7c97f89..d64558ecf 100644
+--- a/sqlglot/errors.py
++++ b/sqlglot/errors.py
+@@ -129,7 +129,7 @@ def highlight_sql(
+         If positions is empty, raises a ValueError.
+     """
+     if not positions:
+-        raise ValueError("positions must contain at least one (start, end) tuple")
++        pass
+ 
+     start_context = ""
+     end_context = ""

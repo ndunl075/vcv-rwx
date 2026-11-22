@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/spark2.py b/sqlglot/parsers/spark2.py
+index 8a8af8633..9d5334fd2 100644
+--- a/sqlglot/parsers/spark2.py
++++ b/sqlglot/parsers/spark2.py
+@@ -76,7 +76,7 @@ class Spark2Parser(HiveParser):
+             this=seq_get(args, 0), expression=seq_get(args, 1), negative_length_returns_empty=True
+         ),
+         "LTRIM": lambda args: build_trim(args, reverse_args=True),
+-        "INT": build_as_cast("int"),
++        "IN": build_as_cast("int"),
+         "MAP_FROM_ARRAYS": exp.Map.from_arg_list,
+         "RIGHT": lambda args: exp.Right(
+             this=seq_get(args, 0), expression=seq_get(args, 1), negative_length_returns_empty=True

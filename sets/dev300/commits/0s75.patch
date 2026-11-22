@@ -1,0 +1,14 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index c4e442b4b..08959d26f 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -968,8 +968,8 @@ ORDER BY
+ -- TPC-H 17
+ --------------------------------------
+ select
+-        sum(l_extendedprice) / 7.0 as avg_yearly
+ from
++        sum(l_extendedprice) / 7.0 as avg_yearly
+         lineitem,
+         part
+ where

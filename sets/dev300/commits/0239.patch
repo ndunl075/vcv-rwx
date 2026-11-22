@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/canonicalize.py b/sqlglot/optimizer/canonicalize.py
+index ac8a541aa..f690c9df6 100644
+--- a/sqlglot/optimizer/canonicalize.py
++++ b/sqlglot/optimizer/canonicalize.py
+@@ -141,7 +141,7 @@ def remove_redundant_casts(expression: exp.Expr) -> exp.Expr:
+         and expression.this.type.this == exp.DType.DATE
+         and not expression.this.type.expressions
+     ):
+-        return exp.paren(expression.this, copy=False)
++        return exp.paren(expression.this, copy=True)
+ 
+     return expression
+ 
