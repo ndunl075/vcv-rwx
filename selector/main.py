@@ -370,11 +370,12 @@ def prove_slow(c, p):
     swap = cmpproof.single_compare_swap(read_pinned(path), new, path)
     if swap is None:
         return
-    for n in slow:
-        if c.cmp.same_outcome(c.id_of[n], *swap):
-            p.cand.discard(n)
-            p.base.discard(n)
-            p.notes.append("%s runs as before (%s -> %s at %s)" % (c.id_of[n].rsplit("::", 1)[1], swap[1], swap[2], swap[0]))
+    proven = [n for n in slow if c.cmp.same_outcome(c.id_of[n], *swap)]
+    for n in proven:
+        p.cand.discard(n)
+        p.base.discard(n)
+    if proven:
+        p.notes.append("%d of %d candidates run as before (%s -> %s at %s)" % (len(proven), len(slow), swap[1], swap[2], swap[0]))
 
 
 def decide(c, p, loaded):

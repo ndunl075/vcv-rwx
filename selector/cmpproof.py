@@ -19,15 +19,56 @@ ORDER = ["Eq", "NotEq", "Lt", "LtE", "Gt", "GtE", "Is", "IsNot", "In", "NotIn"]
 
 
 class CmpMap:
+    """Two layouts of maps/cmp.json.gz:
+
+    by test   {"tests": {test id: {site: [op, mask]}}}
+    by site   {"ids": [test ids], "skipped": [indexes without a profile],
+               "sites": {site: [op, {mask: "index ranges"}]}}        (every recorded test, see tools/cmpmap_alt)
+
+    A profiled test that never executes a comparison cannot notice which operator stands there."""
+
     def __init__(self, path=PATH):
         with gzip.open(path, "rt") as f:
             d = json.load(f)
-        self.tests = d["tests"]   # test id -> {"path:line:col:endline:endcol": [op, mask]}
+        self.sites = d.get("sites")
+        if self.sites is None:
+            self.by_test = d["tests"]
+            self.tests = self.by_test          # the tests that have a profile
+        else:
+            skipped = set(d.get("skipped", ()))
+            self.index = {t: i for i, t in enumerate(d["ids"]) if i not in skipped}
+            self.tests = self.index
+            self._cache = {}
+
+    def _site(self, site):
+        got = self._cache.get(site)
+        if got is None:
+            rec = self.sites.get(site)
+            masks = {}
+            if rec is not None:
+                for mask, ranges in rec[1].items():
+                    for part in ranges.split(","):
+                        a, _, b = part.partition("-")
+                        for i in range(int(a), int(b or a) + 1):
+                            masks[i] = int(mask)
+            got = self._cache[site] = (rec[0] if rec is not None else None, masks)
+        return got
 
     def same_outcome(self, test_id, site, old_op, new_op):
-        """True if `test_id` executes the comparison at `site` and `new_op` always agreed with `old_op`."""
-        got = self.tests.get(test_id, {}).get(site)
-        return bool(got and got[0] == old_op and new_op in ORDER and got[1] >> ORDER.index(new_op) & 1)
+        """True if replacing `old_op` by `new_op` at `site` cannot change what `test_id` does: the test
+        never executes the comparison, or `new_op` gave the same bool at every execution it makes."""
+        if new_op not in ORDER:
+            return False
+        if self.sites is None:
+            got = self.by_test.get(test_id, {}).get(site)
+            return bool(got and got[0] == old_op and got[1] >> ORDER.index(new_op) & 1)
+        i = self.index.get(test_id)
+        if i is None:
+            return False
+        op, masks = self._site(site)
+        if i not in masks:
+            return True
+        return op == old_op and bool(masks[i] >> ORDER.index(new_op) & 1)
 
 
 class _Different(Exception):
