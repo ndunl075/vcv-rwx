@@ -17,7 +17,8 @@ def main():
     ids = [t["id"] for t in tests]
     idx = {i: n for n, i in enumerate(ids)}
     d = sys.argv[3]
-    reads = {}
+    reads = {}   # slot -> bitmask of the tests that read it in a cold run
+    sess = {}    # slot -> bitmask of the tests that read it in the whole-suite session
     unknown, seen = set(), set()
     for p in sorted(glob.glob(os.path.join(d, "cold-*.jsonl.gz"))):
         for line in gzip.open(p, "rt"):
@@ -41,7 +42,7 @@ def main():
                     cur = idx.get(rec[2:])
                     session = True
                 elif cur is not None and rec:
-                    reads[rec] = reads.get(rec, 0) | (1 << cur)
+                    sess[rec] = sess.get(rec, 0) | (1 << cur)
     tracked = [k for k in open(os.path.join(d, "tracked.txt")).read().split("\n") if k]
     sets, sid = [], {}
 
@@ -52,14 +53,16 @@ def main():
             sets.append(encode([i for i in range(len(ids)) if mask >> i & 1]))
         return s
 
-    slots = {k: S(m) for k, m in sorted(reads.items())}
+    slots = {k: S(reads.get(k, 0) | sess.get(k, 0)) for k in sorted(set(reads) | set(sess))}
+    # readers that were seen only in the whole-suite session: a cold run of such a test proves nothing
+    only = {k: S(sess[k] & ~reads.get(k, 0)) for k in sorted(sess) if sess[k] & ~reads.get(k, 0)}
     for k in tracked:
         slots.setdefault(k, -1)   # seen by the tracer, read by no test
-    out = {"ids": ids, "sets": sets, "slots": slots, "unknown": sorted(unknown), "session": session}
+    out = {"ids": ids, "sets": sets, "slots": slots, "only": only, "unknown": sorted(unknown), "session": session}
     with gzip.GzipFile(sys.argv[2], "wb", mtime=0) as f:
         f.write(json.dumps(out, separators=(",", ":")).encode())
-    print("tests %d traced %d unknown %d slots read %d tracked %d sets %d session %s" % (
-        len(ids), len(seen), len(unknown), len(reads), len(tracked), len(sets), session), file=sys.stderr)
+    print("tests %d traced %d unknown %d slots read %d (session only for %d) tracked %d sets %d session %s" % (
+        len(ids), len(seen), len(unknown), len(slots), len(only), len(tracked), len(sets), session), file=sys.stderr)
 
 
 if __name__ == "__main__":

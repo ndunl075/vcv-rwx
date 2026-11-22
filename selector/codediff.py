@@ -13,6 +13,7 @@ An execution that never runs a marked instruction runs the same instructions wit
 in both versions.  The result is the set of old line numbers that hold a marked instruction: a test
 can only be affected through this file's code if it executes one of those lines.
 """
+import ast
 import difflib
 import dis
 import sys
@@ -311,3 +312,80 @@ def diff(old_source, new_source, path, old_code=None):
 def changed_lines(old_source, new_source, path, old_code=None):
     """Old line numbers a test must execute to be affected."""
     return diff(old_source, new_source, path, old_code).lines
+
+
+def _dump(node):
+    return ast.dump(node, include_attributes=False)
+
+
+def _header(node):
+    """A def or class without its body."""
+    fields = {}
+    for name, value in ast.iter_fields(node):
+        if name in ("body", "type_comment"):
+            continue
+        fields[name] = value
+    return _dump(ast.Module(body=[], type_ignores=[])) + repr(type(node).__name__) + repr(
+        {k: ([_dump(x) for x in v] if isinstance(v, list) else _dump(v) if isinstance(v, ast.AST) else repr(v))
+         for k, v in fields.items()})
+
+
+def _targets_ok(node):
+    """An assignment to plain names, none of them a dunder (`__all__`, `__slots__`, `__doc__`...): what it
+    changes is a slot of the module or class.  Attribute and item assignments reach other objects."""
+    out = []
+    for t in (node.targets if isinstance(node, ast.Assign) else [node.target]):
+        for x in ast.walk(t):
+            if isinstance(x, (ast.Attribute, ast.Subscript, ast.Starred)):
+                return False
+            if isinstance(x, ast.Name):
+                out.append(x.id)
+    return bool(out) and not any(n[:2] == "__" for n in out)
+
+
+def _same_bodies(a, b):
+    if len(a) != len(b):
+        return False
+    for x, y in zip(a, b):
+        if type(x) is not type(y):
+            return False
+        if _dump(x) == _dump(y) and not isinstance(x, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue   # the same statement
+        if isinstance(x, (ast.Assign, ast.AugAssign)):
+            if not _targets_ok(x):
+                return False
+            if isinstance(x, ast.Assign):
+                if _dump(ast.Tuple(elts=x.targets, ctx=ast.Load())) != _dump(ast.Tuple(elts=y.targets, ctx=ast.Load())):
+                    return False
+            elif _dump(x.target) != _dump(y.target) or _dump(x.op) != _dump(y.op):
+                return False
+        elif isinstance(x, ast.AnnAssign):
+            if (not _targets_ok(x) or _dump(x.target) != _dump(y.target) or _dump(x.annotation) != _dump(y.annotation)
+                    or x.simple != y.simple or (x.value is None) != (y.value is None)):
+                return False
+        elif isinstance(x, ast.ClassDef):
+            if _header(x) != _header(y) or not _same_bodies(x.body, y.body):
+                return False
+        elif isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if _header(x) != _header(y) or ast.get_docstring(x, clean=False) != ast.get_docstring(y, clean=False):
+                return False   # (a changed body is function code: the line map answers for it)
+        elif _dump(x) != _dump(y):
+            return False
+    return True
+
+
+def values_only(old_source, new_source):
+    """True if the patch only changes the values assigned in module-level and class-level assignments
+    (and the bodies of functions, which are function code): every other statement of module and class
+    bodies is the same, none of the assigned names is a dunder.  Anything else that import-time code
+    can do (docstrings, imports, decorators, bases, calls, conditions, deletions) is not covered by the
+    comparison of import states."""
+    try:
+        a = ast.parse(old_source)
+        b = ast.parse(new_source)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return False
+    try:
+        return _same_bodies(a.body, b.body)
+    except RecursionError:
+        return False

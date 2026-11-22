@@ -173,11 +173,13 @@ def classify(c, p, path, old, new):
         return None
     p.diffs[path] = d
     lines = d.lines
-    if d.import_level and c.sm is not None and path.startswith("sqlglot/"):
-        # Import-time code changed.  Whoever runs changed function code is a candidate as always; the
+    if d.import_level and c.sm is not None and path.startswith("sqlglot/") and codediff.values_only(old, new):
+        # Import-time code changed, and only the values of assignments in module and class bodies (and
+        # function bodies).  Whoever runs changed function code is a candidate as always; the
         # effect of the import-time part is the set of slots it changes, known after a comparison of
         # the two import states: until then (and if that fails) every test that runs the changed
-        # import-time lines, i.e. every importer, stands in.
+        # import-time lines, i.e. every importer, stands in.  Any other import-time change (docstrings,
+        # imports, decorators, bases, calls, conditions, deletions) keeps selecting every importer.
         imp, _ = c.lm.executors(path, lines - d.func_lines)
         p.importers |= c.nums(imp)
         p.slots = True
@@ -257,15 +259,19 @@ def imports_libs(test_file, depth=0):
 
 
 def function_readers(c, where):
-    """Tests that run the code of a function-like slot ("file:first-last" of the pinned code)."""
+    """Tests that run the code of a function-like slot ("file:first-last" of the pinned code): (cold, session only)."""
     path, _, span = where.rpartition(":")
     lo, _, hi = span.partition("-")
     cold, sess = c.lm.executors(path, range(int(lo), int(hi) + 1))
-    return c.nums(cold) | c.nums(sess)
+    return c.nums(cold), c.nums(sess)
+
+
+_NO_DYNAMIC = {}
 
 
 def global_readers(c, modname, name):
-    """Tests that run a line of the module's own functions that mentions the global `name`."""
+    """Tests that run a line of the module's own functions that mentions the global `name`:
+    (cold, session only), or None if the module's source cannot be read with certainty."""
     import ast
 
     for path in (modname.replace(".", "/") + ".py", modname.replace(".", "/") + "/__init__.py"):
@@ -276,6 +282,14 @@ def global_readers(c, modname, name):
         return None
     with open(full, "rb") as f:
         tree = ast.parse(f.read())
+    if path not in _NO_DYNAMIC:
+        # a module that looks its own globals up by string reads them where no name shows
+        _NO_DYNAMIC[path] = not any(
+            (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in ("globals", "vars", "locals", "eval", "exec"))
+            or (isinstance(n, ast.Attribute) and n.attr == "__dict__")
+            for n in ast.walk(tree))
+    if not _NO_DYNAMIC[path]:
+        return None
     lines = set()
     for fn in ast.walk(tree):
         if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
@@ -285,40 +299,46 @@ def global_readers(c, modname, name):
                 elif isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names:
                     lines.update(range(fn.lineno, fn.end_lineno + 1))
     cold, sess = c.lm.executors(path, lines)
-    return c.nums(cold) | c.nums(sess)
+    return c.nums(cold), c.nums(sess)
 
 
 MAX_CHANGED_SLOTS = 400
 
 
 def slot_readers(c, changed):
-    """Tests that can see any of the changed slots, or (None, reason) when that cannot be told."""
+    """Tests that can see any of the changed slots: (readers, those of them seen only in the whole-suite
+    session, note), or (None, None, reason) when that cannot be told."""
     if len(changed) > MAX_CHANGED_SLOTS:
-        return None, "%d slots changed" % len(changed)
-    out = set()
+        return None, None, "%d slots changed" % len(changed)
+    out, sess = set(), set()
     for key, (a, b) in changed.items():
         if key[0] == "E" or a is None or b is None or key.endswith("<structure>"):
-            return None, "%s %s" % (key.replace("\t", " "), "appears or disappears" if key[0] != "E" else "fails to import")
+            return None, None, "%s %s" % (key.replace("\t", " "), "appears or disappears" if key[0] != "E" else "fails to import")
         ka, kb = a[0], b[0]
         if ka != kb or ka == "x":
-            return None, "%s holds another kind of value" % key.replace("\t", " ")
+            return None, None, "%s holds another kind of value" % key.replace("\t", " ")
         parts = key.split("\t")
         if ka == "f":
             if "@" not in a:
-                return None, "%s: code of unknown place" % key.replace("\t", " ")
-            got = function_readers(c, a.split("@", 1)[1])
+                return None, None, "%s: code of unknown place" % key.replace("\t", " ")
+            cold, so = function_readers(c, a.split("@", 1)[1])
+            got = cold | so
         elif parts[0] == "C":
             got = c.sm.class_readers(key)
             if got is None:
-                return None, "%s is not traced" % key.replace("\t", " ")
+                return None, None, "%s is not traced" % key.replace("\t", " ")
             got = {c.snum_at[i] for i in got if c.snum_at[i] is not None}
+            so = {c.snum_at[i] for i in c.sm.session_only(key) if c.snum_at[i] is not None}
         else:
             inner = global_readers(c, parts[1], parts[2])
             if inner is None:
-                return None, "%s: no source" % key.replace("\t", " ")
-            got = inner | {c.snum_at[i] for i in c.sm.module_readers(key) if c.snum_at[i] is not None}
+                return None, None, "%s: no source" % key.replace("\t", " ")
+            outside = {c.snum_at[i] for i in c.sm.module_readers(key) if c.snum_at[i] is not None}
+            got = inner[0] | inner[1] | outside
+            so = inner[1] | {c.snum_at[i] for i in c.sm.session_only(key) if c.snum_at[i] is not None}
         out |= got
-    return out, "%d slots" % len(changed)
+        sess |= so
+    return out, sess, "%d slots" % len(changed)
 
 
 def resolve_slots(c, p, servers, slot, budget):
@@ -330,12 +350,14 @@ def resolve_slots(c, p, servers, slot, budget):
             for old, new in d.pairs:
                 translate[codediff.code_hash(new, memo)] = codediff.code_hash(old, memo)
     changed = verify.changed_slots(servers, slot, p.new_files, translate, c.state_path, budget)
-    readers, note = slot_readers(c, changed)
+    readers, sess, note = slot_readers(c, changed)
     if readers is None:
         p.notes.append("slots: %s -> every importer" % note)
         return
     p.notes.append("slots: %s, %d readers instead of %d importers" % (note, len(readers), len(p.importers)))
     p.cand = p.base | readers | c.always
+    # readers seen only after earlier tests of the whole suite: a run of them alone proves nothing
+    p.unrun |= sess
 
 
 def items(c, nums):
