@@ -51,7 +51,7 @@ def read_records(d):
                     _, pid, imp, cur, site, op, alt = rec
                     drops.setdefault(site, (op, set()))[1].add(alt)
                 elif k == "C":
-                    _, pid, site, op, n, m = rec
+                    _, pid, cur, site, op, n = rec
                     o, c = counts.get(site, (op, 0))
                     counts[site] = (op, c + int(n))
                 elif k == "S":

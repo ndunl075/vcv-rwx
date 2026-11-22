@@ -14,9 +14,14 @@ ends with os._exit loses nothing but its counts):
     S pid ppid time exe            process start
     D pid imp cur site op alt      alternative `alt` of the comparison `site` (operator `op`) disagreed in the
                                    test `cur` (the whole-suite run marks it; "-" otherwise); imp is 1 if the
-                                   execution happened while a module was being imported
-    C pid site op count live       at exit: executions seen while an alternative was alive, and the bit mask
-                                   of the alternatives still alive
+                                   execution happened while a module was being imported.  Written the first
+                                   time per test and process: the state of every site is reset at each test
+                                   boundary (rwx_cmpmarks) and in every forked child, so a disagreement of a
+                                   later test is recorded too
+    R pid imp cur site op          the original comparison raised (an alternative could have answered; a D
+                                   record for every alternative of the site is written with it)
+    C pid cur site op count        executions of the site while test `cur` ran, written when the test ends
+                                   (the main process of the whole-suite run) or at exit (the rest)
     A pid event detail             a process was started (os.fork, subprocess.Popen, ...): detail says whether
                                    the child inherits this tracer
     P pid                          the whole-suite pytest process (written by rwx_cmpmarks)
@@ -49,7 +54,7 @@ if _dir:
     ORD_TYPES = (int, str, bytes, bool)   # exact types whose ordering is a pure function of the values
     _OBJ_EQ = (object.__eq__, str.__eq__, int.__eq__)
     _OBJ_NE = (object.__ne__, str.__ne__, int.__ne__)
-    _state = {}
+    _state = {}    # site -> [op, mask of alternatives alive for the current test, executions]; reset per test
     _cur = [None]
     _types = {}
 
@@ -117,14 +122,30 @@ if _dir:
         st[1] &= ~BIT[name]
         _rec("D\t%d\t%d\t%s\t%s\t%s\t%s\n" % (_getpid(), _importing(), (_cur[0] or "-").replace("\t", " "), site, op, name))
 
-    def _cmp(site, a, b, op):
-        r = FUNC[op](a, b)
+    def _raised(site, op):
+        """the original comparison raised: every alternative of the site counts as a disagreement"""
         st = _state.get(site)
         if st is None:
             st = _state[site] = [op, ALTMASK.get(op, 0), 0]
+        st[2] += 1
+        if st[1]:
+            _rec("R\t%d\t%d\t%s\t%s\t%s\n" % (_getpid(), _importing(), (_cur[0] or "-").replace("\t", " "), site, op))
+            for name in ALTS[op]:
+                if st[1] & BIT[name]:
+                    _drop(site, op, name, st)
+
+    def _cmp(site, a, b, op):
+        try:
+            r = FUNC[op](a, b)
+        except BaseException:
+            _raised(site, op)
+            raise
+        st = _state.get(site)
+        if st is None:
+            st = _state[site] = [op, ALTMASK.get(op, 0), 0]
+        st[2] += 1
         m = st[1]
         if m:
-            st[2] += 1
             if type(r) is not bool:
                 for name in ALTS[op]:
                     if m & BIT[name]:
@@ -137,8 +158,28 @@ if _dir:
 
     builtins.__rwx_cmp__ = _cmp
 
+    def _flush():
+        """write the execution counts of the current test and start the next one with every alternative alive"""
+        if _state:
+            cur = (_cur[0] or "-").replace("\t", " ")
+            pid = _getpid()
+            _write(_fd, "".join("C\t%d\t%s\t%s\t%s\t%d\n" % (pid, cur, site, st[0], st[2])
+                               for site, st in _state.items()).encode("utf-8", "replace"))
+            _state.clear()
+
     def _mark(nodeid):
+        try:
+            _flush()
+        except OSError:
+            _state.clear()
         _cur[0] = nodeid
+
+    # a forked child (multiprocessing pool, ...) reports its own executions and disagreements: the mask the
+    # parent had cleared must not hide them, and the parent's counts are the parent's
+    os.register_at_fork(after_in_child=_state.clear)
+
+    # the rewritten code adds a frame (_cmp, and _agree or _drop, _importing below it) at the comparison
+    sys.setrecursionlimit(sys.getrecursionlimit() + 4)
 
     def _note(kind, text):
         _rec("%s\t%d\t%s\n" % (kind, _getpid(), text.replace("\t", " ").replace("\n", " ")))
@@ -217,12 +258,7 @@ if _dir:
 
     def _end(*a):
         try:
-            pid = _getpid()
-            out = []
-            for site, (op, m, n) in _state.items():
-                if m:
-                    out.append("C\t%d\t%s\t%s\t%d\t%d\n" % (pid, site, op, n, m))
-            _write(_fd, "".join(out).encode())
+            _flush()
         except Exception:
             pass
 

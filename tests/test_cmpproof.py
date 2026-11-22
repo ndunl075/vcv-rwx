@@ -232,7 +232,7 @@ class TracerTests(unittest.TestCase):
                     if rec[0] == "D":
                         drops.setdefault(rec[4], set()).add(rec[6])
                     elif rec[0] == "C":
-                        counts[rec[2]] = int(rec[5])
+                        counts[rec[3]] = counts.get(rec[3], 0) + int(rec[5])
             alive = lambda s: s not in drops and s in counts   # noqa: E731
             self.assertTrue(alive("s1"))
             self.assertTrue(alive("s2"))
@@ -242,7 +242,9 @@ class TracerTests(unittest.TestCase):
             self.assertEqual(drops["s6"], {"Gt"})
             self.assertEqual(drops["s7"], {"LtE", "Gt"})
             self.assertEqual(drops["s8"], {"Gt"})
-            self.assertNotIn("s9", drops)
+            self.assertEqual(drops["s9"], {"LtE", "Gt"})                      # the original raised: every alternative disagrees
+            self.assertEqual(counts["s9"], 1)
+            self.assertEqual(counts["s5"], 2)
             self.assertEqual(drops["s10"], {"Is"})
             self.assertEqual(drops["s11"], {"Is"})
             self.assertEqual(drops["s12"], {"Eq"})
@@ -261,7 +263,74 @@ class TracerTests(unittest.TestCase):
             self.assertEqual(p.stdout.strip(), "(True, True, False, False)")
             col = len("    return (a < b < c, a in d, ")
             counts = [l.split("\t") for n in os.listdir(out) if n.endswith(".cmp") for l in open(os.path.join(out, n)) if l[0] in "CD"]
-            self.assertEqual([c[4] if c[0] == "D" else c[2] for c in counts], ["sqlglot/m.py:2:%d:2:%d" % (col, col + 6)])   # only `a is b`
+            self.assertEqual({c[4] if c[0] == "D" else c[3] for c in counts}, {"sqlglot/m.py:2:%d:2:%d" % (col, col + 6)})   # only `a is b`
+
+
+TEST_BOUNDS = r"""
+import os, sys, builtins, json
+sys.path.insert(0, %(tools)r)
+os.environ["RWX_CMP_DIR"] = %(out)r
+os.environ["RWX_CMP_ROOT"] = %(out)r
+import sitecustomize
+cmp = builtins.__rwx_cmp__
+sys.rwx_cmp_mark("t::one")
+cmp("s1", 1, 1, "Lt")                       # LtE disagrees in test one
+cmp("s1", 1, 1, "Lt")
+sys.rwx_cmp_mark(None)
+sys.rwx_cmp_mark("t::two")
+cmp("s1", 1, 1, "Lt")                       # ... and again in test two: recorded again
+cmp("s2", 1, 2, "Lt")                       # Gt only
+sys.rwx_cmp_mark(None)
+sys.rwx_cmp_mark("t::three")
+cmp("s2", 1, 3, "Lt")                       # Gt differs: recorded for three
+sys.rwx_cmp_mark("t::four")                 # no end marker: the next start flushes
+pid = os.fork()
+if pid == 0:
+    cmp("s1", 2, 2, "Lt")                   # a forked child records its own disagreement (LtE), as test four
+    os._exit(0)
+os.waitpid(pid, 0)
+cmp("s1", 5, 6, "Lt")                       # the parent: Gt differs
+sys.rwx_cmp_mark(None)
+try:
+    cmp("s3", None, 1, "Lt")
+except TypeError:
+    pass
+sys.stdout.write(str(sys.getrecursionlimit()))
+"""
+
+
+class TracerPerTestTests(unittest.TestCase):
+    def records(self, code):
+        with tempfile.TemporaryDirectory() as out:
+            p = subprocess.run([sys.executable, "-c", code % {"tools": os.path.join(ROOT, "tools", "cmpmap"), "out": out}],
+                               capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            recs = [l.rstrip("\n").split("\t") for n in sorted(os.listdir(out)) for l in open(os.path.join(out, n))]
+            return p, recs
+
+    def test_disagreements_are_recorded_per_test_and_per_forked_child(self):
+        p, recs = self.records(TEST_BOUNDS)
+        drops = {}
+        for r in recs:
+            if r[0] == "D":
+                drops.setdefault((r[3], r[4]), []).append(r[6])
+        self.assertEqual(drops[("t::one", "s1")], ["LtE"])
+        self.assertEqual(drops[("t::two", "s1")], ["LtE"])                     # not hidden by test one
+        self.assertEqual(drops[("t::two", "s2")], ["Gt"])
+        self.assertEqual(drops[("t::three", "s2")], ["Gt"])
+        self.assertEqual(sorted(drops[("t::four", "s1")]), ["Gt", "LtE"])      # the child (inherits the current test) and the parent
+        self.assertNotIn(("t::four", "s2"), drops)
+        self.assertEqual(len({r[1] for r in recs if r[0] == "D" and r[3] == "t::four"}), 2)
+        counts = {}
+        for r in recs:
+            if r[0] == "C":
+                counts[(r[2], r[3])] = counts.get((r[2], r[3]), 0) + int(r[5])
+        self.assertEqual(counts[("t::one", "s1")], 2)
+        self.assertEqual(counts[("t::two", "s1")], 1)
+        self.assertEqual(counts[("t::four", "s1")], 2)                         # child 1 + parent 1
+        self.assertEqual(counts[("-", "s3")], 1)
+        self.assertEqual([r[3:] for r in recs if r[0] == "R"], [["-", "s3", "Lt"]])   # the original raised
+        self.assertEqual(int(p.stdout), sys.getrecursionlimit() + 4)           # the extra frame of the rewrite is paid for
 
 
 class PackTests(unittest.TestCase):
