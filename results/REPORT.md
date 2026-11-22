@@ -1,6 +1,6 @@
 # RWX Blast Radius: benchmark report
 
-Generated 2026-11-22 01:48:31. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
+Generated 2026-11-22 02:03:37. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
 
 Patches per set: sample 30
 

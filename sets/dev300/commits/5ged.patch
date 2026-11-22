@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/presto.py b/sqlglot/generators/presto.py
+index 5a0872a62..19f793097 100644
+--- a/sqlglot/generators/presto.py
++++ b/sqlglot/generators/presto.py
+@@ -72,7 +72,7 @@ def _array_sort_sql(self: PrestoGenerator, expression: exp.ArraySort) -> str:
+             "ARRAY_SORT can't sort ascending with NULLs first or descending with NULLs last"
+         )
+     sort = self.func("ARRAY_SORT", expression.this)
+-    return sort if asc else self.func("REVERSE", sort)
++    return sort if asc else self.func("REVERSE", sort)  # See the dialect docs
+ 
+ 
+ def _schema_sql(self: PrestoGenerator, expression: exp.Schema) -> str:

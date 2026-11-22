@@ -713,6 +713,139 @@
 "kind": "comment",
 "missing": [],
 "sub": "line"
+},
+"5fh6": {
+"failing": [
+1434
+],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"5ged": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "trailing"
+},
+"5lqv": {
+"failing": [
+167
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"5qo6": {
+"failing": [
+1378
+],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"5qqm": {
+"failing": [],
+"kind": "multi",
+"missing": [],
+"sub": "2files"
+},
+"5w68": {
+"failing": [
+1408
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"5y6g": {
+"failing": [
+1378
+],
+"kind": "fixture",
+"missing": [],
+"sub": "typo"
+},
+"5yst": {
+"failing": [
+914
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"61v1": {
+"failing": [
+15,
+27,
+74,
+1295,
+1300,
+1301,
+1302,
+1433,
+1434
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"68ti": {
+"failing": [
+288
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"6gfr": {
+"failing": [
+532
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"6jez": {
+"failing": [
+27,
+93,
+117,
+181,
+224,
+225,
+226,
+228,
+231,
+248,
+269,
+375,
+437,
+438,
+446,
+450,
+455,
+456,
+465,
+468,
+472,
+476,
+477,
+581,
+586,
+639,
+855,
+918,
+922,
+930,
+972,
+1382,
+1434,
+1590
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
 }
 }
 }

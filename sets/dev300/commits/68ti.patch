@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/dremio.py b/sqlglot/generators/dremio.py
+index b79c263bf..bfc773343 100644
+--- a/sqlglot/generators/dremio.py
++++ b/sqlglot/generators/dremio.py
+@@ -70,7 +70,7 @@ class DremioGenerator(generator.Generator):
+         exp.TryCast: no_trycast_sql,
+         exp.DateAdd: _date_delta_sql("DATE_ADD"),
+         exp.DateSub: _date_delta_sql("DATE_SUB"),
+-        exp.GenerateSeries: rename_func("ARRAY_GENERATE_RANGE"),
++        exp.GenerateSeries: rename_func("ARRAY_GENE_RATE_RANGE"),
+         exp.RegexpSplit: lambda self, e: self.func(
+             "REGEXP_SPLIT", e.this, e.expression, e.args.get("mode"), e.args.get("limit")
+         ),

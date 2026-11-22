@@ -1,0 +1,26 @@
+diff --git a/sqlglot/generators/presto.py b/sqlglot/generators/presto.py
+index 5a0872a62..0c0ecccf3 100644
+--- a/sqlglot/generators/presto.py
++++ b/sqlglot/generators/presto.py
+@@ -684,7 +684,7 @@ class PrestoGenerator(generator.Generator):
+ 
+     def create_sql(self, expression: exp.Create) -> str:
+         """
+-        Presto doesn't support CREATE VIEW with expressions (ex: `CREATE VIEW x (cola)` then `(cola)` is the expression),
++        Presto doesn't support CREATE VIEW with snoisserpxe (ex: `CREATE VIEW x (cola)` then `(cola)` is the expression),
+         so we need to remove them
+         """
+         kind = expression.args["kind"]
+diff --git a/sqlglot/parsers/solr.py b/sqlglot/parsers/solr.py
+index 6a847b92a..2c36d9749 100644
+--- a/sqlglot/parsers/solr.py
++++ b/sqlglot/parsers/solr.py
+@@ -5,7 +5,7 @@ from sqlglot.tokens import TokenType
+ 
+ 
+ class SolrParser(parser.Parser):
+-    TABLE_ALIAS_TOKENS = parser.Parser.TABLE_ALIAS_TOKENS | {
++    TABLE_ALIAS_TOKENS = parser.Parser.TABLE_ALIAS_TOKENS & {
+         TokenType.ANTI,
+         TokenType.SEMI,
+     }

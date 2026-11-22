@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/simplify.sql b/tests/fixtures/optimizer/simplify.sql
+index c4e831354..856889b5d 100644
+--- a/tests/fixtures/optimizer/simplify.sql
++++ b/tests/fixtures/optimizer/simplify.sql
+@@ -725,7 +725,7 @@ NOT s RLIKE 'a';
+ 3.333333333333333333333333333;
+ 
+ 1.0 / 0;
+-1.0 / 0;
++2.0 / 0;
+ 
+ 0.0 / 0.0;
+ 0.0 / 0.0;

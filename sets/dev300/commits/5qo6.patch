@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/pushdown_projections.sql b/tests/fixtures/optimizer/pushdown_projections.sql
+index fca586db7..35935442f 100644
+--- a/tests/fixtures/optimizer/pushdown_projections.sql
++++ b/tests/fixtures/optimizer/pushdown_projections.sql
+@@ -285,7 +285,7 @@ SELECT t.a AS a, t.c AS c FROM (SELECT x.a AS a, x.b AS b, x.b + 1 AS c FROM x A
+ -- ALL is a grouping-sets modifier (not implicit-key inference) once CUBE/ROLLUP/an explicit
+ -- list is present, so those columns stay prunable like any other explicit GROUP BY column
+ SELECT t.s FROM (SELECT a, b, SUM(b) AS s FROM x GROUP BY ALL CUBE (a, b)) t;
+-SELECT t.s AS s FROM (SELECT SUM(x.b) AS s FROM x AS x GROUP BY ALL CUBE (x.a, x.b)) AS t;
++SELECT t.s AS s FROM (SELECT SUM(y.b) AS s FROM x AS x GROUP BY ALL CUBE (x.a, x.b)) AS t;
+ 
+ SELECT t.s FROM (SELECT a, b, SUM(b) AS s FROM x GROUP BY ALL a, b) t;
+ SELECT t.s AS s FROM (SELECT SUM(x.b) AS s FROM x AS x GROUP BY ALL x.a, x.b) AS t;

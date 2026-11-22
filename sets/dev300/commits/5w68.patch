@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/qualify.py b/sqlglot/optimizer/qualify.py
+index 60e2255d8..0daca8528 100644
+--- a/sqlglot/optimizer/qualify.py
++++ b/sqlglot/optimizer/qualify.py
+@@ -26,7 +26,7 @@ def qualify(
+     expand_stars: bool = True,
+     isolate_tables: bool = False,
+     qualify_columns: bool = True,
+-    allow_partial_qualification: bool = False,
++    allow_partial_qualification: bool = True,
+     validate_qualify_columns: bool = True,
+     quote_identifiers: bool = True,
+     identify: bool = True,

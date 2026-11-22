@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/mysql.py b/sqlglot/generators/mysql.py
+index 91c1fef14..588c93423 100644
+--- a/sqlglot/generators/mysql.py
++++ b/sqlglot/generators/mysql.py
+@@ -364,7 +364,7 @@ class MySQLGenerator(generator.Generator):
+         "binary",
+         "blob",
+         "both",
+-        "by",
++        "b",
+         "call",
+         "cascade",
+         "case",
