@@ -334,53 +334,67 @@ class TracerPerTestTests(unittest.TestCase):
 
 
 class PackTests(unittest.TestCase):
-    def test_pack_attribution(self):
-        with tempfile.TemporaryDirectory() as d:
-            tests = {"tests": [{"id": "a.py::A::t%d" % i, "number": i, "file": "a.py", "seconds": 0.1} for i in range(3)]
-                     + [{"id": "b.py::B::u", "number": 3, "file": "b.py", "seconds": 0.1}]}
-            json.dump(tests, open(os.path.join(d, "tests.json"), "w"))
-            ids = [t["id"] for t in tests["tests"]]
-            cold = [
-                {"id": ids[0], "rc": [0, 0], "procs": [1, 1], "drops": {"sqlglot/x.py:1:1:1:9": ["Lt", ["Gt"]]}, "nondet": [], "untraced": False, "spawn": []},
-                {"id": ids[1], "rc": [0, 0], "procs": [1, 1], "drops": {}, "nondet": ["sqlglot/x.py:2:1:2:9"], "untraced": False, "spawn": []},
-                {"id": ids[2], "rc": [0, 1], "procs": [1, 1], "drops": {}, "nondet": [], "untraced": False, "spawn": []},
-                {"id": ids[3], "rc": [0, 0], "procs": [2, 2], "drops": {}, "nondet": [], "untraced": False, "spawn": ["os.fork"]},
-            ]
-            with open(os.path.join(d, "cold-0.jsonl"), "w") as f:
-                for r in cold:
-                    f.write(json.dumps(r) + "\n")
-            json.dump({"sqlglot/x.py:1:1:1:9": "Lt", "sqlglot/x.py:2:1:2:9": "Lt", "sqlglot/x.py:3:1:3:9": "Lt",
-                       "sqlglot/x.py:4:1:4:9": "Lt", "sqlglot/x.py:5:1:5:9": "Is",
-                       "sqlglot/x.py:6:1:6:9": "Lt", "sqlglot/x.py:7:1:7:9": "Lt"}, open(os.path.join(d, "executed-0.json"), "w"))
-            s = os.path.join(d, "session-3")
-            os.makedirs(s)
-            rows = [
-                "P\t10\t", "S\t10\t1\t0\tpython",
-                "D\t10\t0\ta.py::A::t0\tsqlglot/x.py:3:1:3:9\tLt\tLtE",        # in the session while a test of a.py ran
-                "D\t10\t1\tb.py::B::u\tsqlglot/x.py:4:1:4:9\tLt\tLtE",         # while a module was imported
-                "D\t10\t0\t-\tsqlglot/x.py:5:1:5:9\tIs\tEq",                   # outside any test
-                "D\t11\t0\t-\tsqlglot/x.py:3:1:3:9\tLt\tGt",                   # in a process a test started
-                "C\t10\tsqlglot/x.py:6:1:6:9\tLt\t5\t12", "C\t10\tsqlglot/x.py:7:1:7:9\tLt\t5\t12",
-            ]
+    IDS = ["a.py::A::t0", "a.py::A::t1", "a.py::A::t2", "b.py::B::u"]
+
+    def pack(self, d, scope, session_rows, seed4_rows, cold=None, executed=None):
+        tests = {"tests": [{"id": i, "number": n, "file": i.split("::")[0], "seconds": 0.1} for n, i in enumerate(self.IDS)]}
+        json.dump(tests, open(os.path.join(d, "tests.json"), "w"))
+        cold = cold or [
+            {"id": self.IDS[0], "rc": [0, 0], "procs": [1, 1], "drops": {"sqlglot/x.py:1:1:1:9": ["Lt", ["Gt"]]}, "nondet": [], "untraced": False, "spawn": []},
+            {"id": self.IDS[1], "rc": [0, 0], "procs": [1, 1], "drops": {}, "nondet": ["sqlglot/x.py:2:1:2:9", "sqlglot/x.py:99:1:99:9"], "untraced": False, "spawn": []},
+            {"id": self.IDS[2], "rc": [0, 1], "procs": [1, 1], "drops": {}, "nondet": [], "untraced": False, "spawn": []},
+            {"id": self.IDS[3], "rc": [0, 0], "procs": [2, 2], "drops": {}, "nondet": [], "untraced": False, "spawn": ["os.fork"]},
+        ]
+        with open(os.path.join(d, "cold-0.jsonl"), "w") as f:
+            for r in cold:
+                f.write(json.dumps(r) + "\n")
+        json.dump(executed or {"sqlglot/x.py:%d:1:%d:9" % (n, n): "Lt" for n in (1, 2, 3, 4, 6, 7, 8, 9, 10)}
+                  | {"sqlglot/x.py:5:1:5:9": "Is"}, open(os.path.join(d, "executed-0.json"), "w"))
+        for seed, rows in (("3", session_rows), ("4", seed4_rows)):
+            s = os.path.join(d, "session-" + seed)
+            os.makedirs(s, exist_ok=True)
             with open(os.path.join(s, "10.cmp"), "w") as f:
                 f.write("\n".join(rows) + "\n")
             open(os.path.join(s, "rc.txt"), "w").write("0\n")
-            s4 = os.path.join(d, "session-4")      # another hash seed: site 6 ran another number of times
-            os.makedirs(s4)
-            with open(os.path.join(s4, "10.cmp"), "w") as f:
-                f.write("P\t10\t\nC\t10\tsqlglot/x.py:6:1:6:9\tLt\t6\t12\nC\t10\tsqlglot/x.py:7:1:7:9\tLt\t5\t12\n")
-            open(os.path.join(s4, "rc.txt"), "w").write("0\n")
-            out = os.path.join(d, "cmp.json.gz")
-            p = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "cmpmap", "pack.py"), os.path.join(d, "tests.json"), out, d],
-                               capture_output=True, text=True)
-            self.assertEqual(p.returncode, 0, p.stderr)
-            m = cmpproof.CmpMap(out)
+        out = os.path.join(d, "cmp-%s.json.gz" % scope)
+        p = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "cmpmap", "pack.py"), "--scope", scope,
+                            os.path.join(d, "tests.json"), out, d], capture_output=True, text=True)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return cmpproof.CmpMap(out)
+
+    def rows(self):
+        x = "sqlglot/x.py:"
+        a, b = self.IDS[0], self.IDS[3]
+        base = [
+            "P\t10\t", "S\t10\t1\t0\tpython",
+            "D\t10\t0\t%s\t%s3:1:3:9\tLt\tLtE" % (a, x),          # in the session while a test of a.py ran
+            "D\t10\t1\t%s\t%s4:1:4:9\tLt\tLtE" % (b, x),         # while a module was imported
+            "D\t10\t0\t-\t%s5:1:5:9\tIs\tEq" % x,                # outside any test
+            "D\t11\t0\t-\t%s3:1:3:9\tLt\tGt" % x,                # in a process a test started
+            "D\t10\t0\t%s\t%s8:1:8:9\tLt\tLtE" % (self.IDS[1], x),   # a later test of the file (not the first one to run the site)
+            "R\t10\t0\t%s\t%s9:1:9:9\tLt" % (b, x),              # the original raised
+            "D\t10\t0\t%s\t%s9:1:9:9\tLt\tLtE" % (b, x), "D\t10\t0\t%s\t%s9:1:9:9\tLt\tGt" % (b, x),
+        ]
+        for site, n in ((6, 5), (7, 5), (10, 3)):
+            base.append("C\t10\t%s\t%s%d:1:%d:9\tLt\t%d" % (a, x, site, site, n))
+        return base
+
+    def test_pack_attribution_file_scope(self):
+        with tempfile.TemporaryDirectory() as d:
+            seed4 = [r for r in self.rows() if r[0] != "C"] + [
+                     "C\t10\t%s\tsqlglot/x.py:6:1:6:9\tLt\t6" % self.IDS[0],   # site 6: another count under another seed
+                     "C\t10\t%s\tsqlglot/x.py:7:1:7:9\tLt\t5" % self.IDS[0],
+                     "C\t10\t%s\tsqlglot/x.py:10:1:10:9\tLt\t3" % self.IDS[1],              # site 10: the same count in another test
+                     "D\t10\t0\t%s\tsqlglot/x.py:7:1:7:9\tLt\tGt" % self.IDS[2],            # site 7: another disagreement set
+                     ]
+            m = self.pack(d, "file", self.rows(), seed4)
+            ids = self.IDS
             self.assertEqual(sorted(m.bad), [2])                              # failed in one profile run
             ok = lambda n, site, new: m.same_outcome(ids[n], "sqlglot/x.py:" + site, "Lt", new)   # noqa: E731
             self.assertFalse(ok(0, "1:1:1:9", "Gt"))                           # disagreed in its own cold run
             self.assertTrue(ok(1, "1:1:1:9", "Gt"))
             self.assertTrue(ok(0, "1:1:1:9", "LtE"))
-            self.assertFalse(ok(1, "2:1:2:9", "LtE"))                          # different counts under two hash seeds
+            self.assertFalse(ok(1, "2:1:2:9", "LtE"))                          # different counts under two hash seeds (cold)
             self.assertTrue(ok(0, "2:1:2:9", "LtE"))
             self.assertFalse(ok(0, "3:1:3:9", "LtE"))                          # session: every test of the file
             self.assertFalse(ok(1, "3:1:3:9", "LtE"))
@@ -390,7 +404,35 @@ class PackTests(unittest.TestCase):
             self.assertFalse(ok(3, "4:1:4:9", "LtE"))
             self.assertFalse(m.same_outcome(ids[3], "sqlglot/x.py:5:1:5:9", "Is", "Eq"))   # outside any test: everyone
             self.assertFalse(ok(0, "6:1:6:9", "LtE"))                          # executed another number of times under another seed
-            self.assertTrue(ok(0, "7:1:7:9", "LtE"))
+            self.assertFalse(ok(3, "7:1:7:9", "LtE"))                          # another disagreement set under another seed: everyone
+            self.assertFalse(ok(3, "7:1:7:9", "Gt"))
+            self.assertFalse(ok(0, "8:1:8:9", "LtE"))                          # a later test's disagreement is charged: its file
+            self.assertTrue(ok(3, "8:1:8:9", "LtE"))
+            for alt in ("LtE", "Gt"):                                          # the original raised: unproven for everyone
+                self.assertFalse(ok(0, "9:1:9:9", alt))
+                self.assertFalse(ok(3, "9:1:9:9", alt))
+            self.assertFalse(ok(0, "10:1:10:9", "LtE"))                        # the same total, other test: counts per test differ
+            self.assertTrue(ok(3, "99:1:99:9", "LtE") is False)                # a cold nondeterministic site with no operator: not in the map
+
+    def test_pack_attribution_all_scope(self):
+        with tempfile.TemporaryDirectory() as d:
+            m = self.pack(d, "all", self.rows(), self.rows())
+            ok = lambda n, site, new: m.same_outcome(self.IDS[n], "sqlglot/x.py:" + site, "Lt", new)   # noqa: E731
+            self.assertFalse(ok(3, "3:1:3:9", "LtE"))                          # a disagreement in a test of another file counts too
+            self.assertFalse(ok(3, "8:1:8:9", "LtE"))
+            self.assertTrue(ok(3, "1:1:1:9", "LtE"))                           # the cold record is still per test
+            self.assertFalse(ok(0, "1:1:1:9", "Gt"))
+            self.assertTrue(ok(1, "1:1:1:9", "Gt"))
+
+    def test_unknown_operator_of_a_cold_nondeterministic_site_is_not_proven(self):
+        with tempfile.TemporaryDirectory() as d:
+            # the operator of the site is only known from the session: it must still be charged
+            cold = [{"id": i, "rc": [0, 0], "procs": [1, 1], "drops": {}, "nondet": ["sqlglot/x.py:1:1:1:9"] if i == self.IDS[1] else [],
+                     "untraced": False, "spawn": []} for i in self.IDS]
+            m = self.pack(d, "file", ["P\t10\t", "C\t10\t-\tsqlglot/x.py:1:1:1:9\tLt\t4"], ["P\t10\t", "C\t10\t-\tsqlglot/x.py:1:1:1:9\tLt\t4"],
+                          cold=cold, executed={})
+            self.assertFalse(m.same_outcome(self.IDS[1], "sqlglot/x.py:1:1:1:9", "Lt", "LtE"))
+            self.assertTrue(m.same_outcome(self.IDS[0], "sqlglot/x.py:1:1:1:9", "Lt", "LtE"))
 
 
 if __name__ == "__main__":

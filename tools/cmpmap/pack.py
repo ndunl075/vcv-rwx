@@ -1,8 +1,14 @@
 """Pack the comparison profiles into maps/cmp.json.gz (what it holds and how it is read: selector/cmpproof.py).
 
-    pack.py <tests.json> <out> <profile dir> [<profile dir> ...]
+    pack.py [--scope file|all] <tests.json> <out> <profile dir> [<profile dir> ...]
 
 A profile dir holds cold-*.jsonl / executed-*.json (tools/cmpmap/trace.py cold) and session-<seed>/ (trace.py session).
+
+--scope says whom a disagreement in the whole-suite session is charged to (the test that was running may have changed
+state, a registry, a cache or a session fixture, that another test consumes):
+    file   every test of the file of the running test (class and module fixtures are shared by the file)
+    all    the (site, alternative) is unproven for every test
+Anything that happened while a module was being imported or outside a test is charged to every test in both.
 """
 import glob
 import gzip
@@ -16,9 +22,16 @@ ALL = "all"
 
 
 def main():
-    tests = json.load(open(sys.argv[1]))["tests"]
-    out = sys.argv[2]
-    dirs = sys.argv[3:]
+    argv = sys.argv[1:]
+    scope = "file"
+    if argv and argv[0] == "--scope":
+        scope = argv[1]
+        argv = argv[2:]
+    if scope not in ("file", "all"):
+        raise SystemExit("--scope file|all")
+    tests = json.load(open(argv[0]))["tests"]
+    out = argv[1]
+    dirs = argv[2:]
     ids = [t["id"] for t in tests]
     idx = {i: n for n, i in enumerate(ids)}
     by_file = {}
@@ -43,7 +56,9 @@ def main():
             cur |= who
 
     seen = set()
-    session_counts = {}
+    session_runs = []                # per session: {"counts": {(test, site): n}, "drops": {(test, site): {alt}}}
+    raised = {}                      # site -> op: the original comparison raised in a session
+    cold_nondet = []                 # (test, site): the operator may only be known after the sessions are read
     cold_recs = []
     for d in dirs:
         for p in sorted(glob.glob(os.path.join(d, "executed-*.json"))):
@@ -73,9 +88,7 @@ def main():
             for alt in alts:
                 add(site, alt, {t})
         for site in r["nondet"]:
-            op = executed.get(site)
-            for alt in ALTS.get(op, ()):
-                add(site, alt, {t})
+            cold_nondet.append((t, site))
     for n in range(len(ids)):
         if n not in seen:
             bad.add(n)
@@ -88,13 +101,20 @@ def main():
                 continue          # unfinished
             notes["sessions"] += 1
             mains, recs = set(), []
-            scount = session_counts[sdir] = {}
+            run = {"counts": {}, "drops": {}, "sdir": sdir, "rc": rc}
+            session_runs.append(run)
             for p in sorted(glob.glob(os.path.join(sdir, "*.cmp"))):
-                for raw in open(p, "rb"):
-                    rec = raw.decode("utf-8", "replace").rstrip("\n").split("\t")
-                    if rec[0] == "P":
-                        mains.add(rec[1])
-                    recs.append(rec)
+                with open(p, "rb") as fh:
+                    for raw in fh:
+                        rec = raw.decode("utf-8", "replace").rstrip("\n").split("\t")
+                        if rec[0] == "P":
+                            mains.add(rec[1])
+                        elif rec[0] == "C":
+                            _, pid, cur, site, op, n = rec
+                            executed[site] = op
+                            run["counts"][(cur, site)] = run["counts"].get((cur, site), 0) + int(n)
+                        elif rec[0] in ("F", "A", "D", "R"):
+                            recs.append(rec)
             for rec in recs:
                 k = rec[0]
                 if k == "F":
@@ -102,38 +122,73 @@ def main():
                     if t is not None:
                         bad.add(t)
                         notes["bad"].setdefault("failed in the session", []).append(rec[2])
-                elif k == "C":
-                    executed[rec[2]] = rec[3]
-                    scount[rec[2]] = scount.get(rec[2], 0) + int(rec[4])
                 elif k == "A" and "UNTRACED" in rec[2]:
                     # which test started it is not recorded: nothing it runs is in the profile
                     raise SystemExit("session: a process was started that does not trace (%s): no sound map" % rec[2])
+                elif k == "R":
+                    _, pid, imp, cur, site, op = rec
+                    executed[site] = op
+                    raised[site] = op
                 elif k == "D":
                     _, pid, imp, cur, site, op, alt = rec
                     executed[site] = op
-                    if pid in mains:
-                        if imp == "1" or cur == "-":
-                            who = ALL
-                        else:
-                            who = by_file.get(cur.split("::")[0], ALL)
+                    run["drops"].setdefault((cur, site), set()).add(alt)
+                    cfile = cur.split("::")[0]
+                    if scope == "all":
+                        who = ALL
+                    elif pid in mains:
+                        who = ALL if (imp == "1" or cur == "-") else by_file.get(cfile, ALL)
+                    elif cur != "-" and cfile in by_file and spawn:
+                        who = set(spawn) | by_file[cfile]
+                    elif cur == "-" and spawn:
+                        who = set(spawn)
                     else:
-                        who = set(spawn) | by_file.get(cur.split("::")[0], set()) if cur != "-" else set(spawn)
-                        if not spawn:
-                            who = ALL
+                        who = ALL
                     add(site, alt, who)
-    # whole-suite runs under different hash seeds must execute every comparison equally often
-    runs = list(session_counts.values())
+    if notes["sessions"] == 0:
+        raise SystemExit("no finished session profile: the record would not hold in the whole-suite session")
+
+    # a site where the original comparison raised: the alternative could have answered, so it is unproven for every test
+    for site, op in raised.items():
+        for alt in ALTS.get(op, ()):
+            add(site, alt, ALL)
+    notes["raised"] = len(raised)
+
+    # whole-suite runs under different hash seeds must execute every comparison equally often, in every test, and
+    # the alternatives must disagree in the same tests: any difference makes the site unproven for every test
+    # (the disagreements of both sessions are charged above, so the record is their union)
     nondet = set()
-    for other in runs[1:]:
-        for site in set(runs[0]) | set(other):
-            if runs[0].get(site, 0) != other.get(site, 0):
+    for other in session_runs[1:]:
+        a, b = session_runs[0], other
+        for key in set(a["counts"]) | set(b["counts"]):
+            if a["counts"].get(key, 0) != b["counts"].get(key, 0):
+                nondet.add(key[1])
+        for key in set(a["drops"]) | set(b["drops"]):
+            if a["drops"].get(key, set()) != b["drops"].get(key, set()):
+                nondet.add(key[1])
+        tot = [{}, {}]
+        for i, run in enumerate((a, b)):
+            for (cur, site), n in run["counts"].items():
+                tot[i][site] = tot[i].get(site, 0) + n
+        for site in set(tot[0]) | set(tot[1]):
+            if tot[0].get(site, 0) != tot[1].get(site, 0):
                 nondet.add(site)
     for site in nondet:
         for alt in ALTS.get(executed.get(site), ()):
             add(site, alt, ALL)
     notes["session_nondet"] = len(nondet)
-    if notes["sessions"] == 0:
-        raise SystemExit("no finished session profile: the record would not hold in the whole-suite session")
+
+    # a nondeterministic site of a cold run: its operator is known by now (every recorded site has one); a site with no
+    # operator is not in the map at all, which means unproven
+    unknown = 0
+    for t, site in cold_nondet:
+        op = executed.get(site)
+        if op not in ALTS:
+            unknown += 1
+            continue
+        for alt in ALTS[op]:
+            add(site, alt, {t})
+    notes["cold_nondet_unknown"] = unknown
 
     sets, sid = [], {}
 
@@ -161,7 +216,9 @@ def main():
           % (out, os.path.getsize(out), ns, len(sets), len(bad), notes["cold"], notes["sessions"], allset), file=sys.stderr)
     for why, lst in notes["bad"].items():
         print("  bad (%s): %d  %s" % (why, len(lst), sorted(lst)[:4]), file=sys.stderr)
-    print("  spawn tests: %d; sites whose count differs between sessions: %d" % (len(spawn), notes["session_nondet"]), file=sys.stderr)
+    print("  scope %s; spawn tests: %d; sites whose counts or disagreements differ between sessions: %d; sites where the original raised: %d; "
+          "cold nondeterministic sites with no known operator (absent from the map): %d"
+          % (scope, len(spawn), notes["session_nondet"], notes["raised"], notes["cold_nondet_unknown"]), file=sys.stderr)
 
 
 if __name__ == "__main__":
