@@ -44,6 +44,7 @@ def is_data(name, value):
 
 
 _BIG = 1 << 30
+_blake2b = hashlib.blake2b
 
 
 def mutable(v):
@@ -52,6 +53,10 @@ def mutable(v):
         return True
     return (isinstance(getattr(v, "__dict__", None), dict)
             and not isinstance(v, (type, types.ModuleType, types.FunctionType, types.MethodType, types.BuiltinFunctionType)))
+
+
+def _hexdigest(parts):
+    return _blake2b("\0".join(parts).encode("utf-8", "backslashreplace"), digest_size=10).hexdigest()
 
 
 class Snap:
@@ -73,14 +78,24 @@ class Snap:
         self.shared = set()     # slots earlier than the current one that hold some object of it
         self.strays = {}        # id -> class of sqlglot met in a value that no module namespace owns
 
-    @staticmethod
-    def hexdigest(parts):
-        return hashlib.blake2b("\0".join(parts).encode("utf-8", "backslashreplace"), digest_size=10).hexdigest()
+    hexdigest = staticmethod(_hexdigest)
 
     def digest(self, *parts):
-        """Digest of strings and fingerprint pairs."""
-        return (self.hexdigest([p if isinstance(p, str) else p[0] for p in parts]),
-                self.hexdigest([p if isinstance(p, str) else p[1] for p in parts]))
+        """Digest of strings and fingerprint pairs (one hash when no part tells the two apart)."""
+        a, b = [], []
+        same = True
+        for p in parts:
+            if p.__class__ is str:
+                a.append(p)
+                b.append(p)
+            else:
+                x, y = p
+                a.append(x)
+                b.append(y)
+                if x != y:
+                    same = False
+        h = _hexdigest(a)
+        return (h, h) if same else (h, _hexdigest(b))
 
     def code(self, code):
         h = code_hash(code, self.codes)
@@ -148,6 +163,13 @@ class Snap:
     def _fp(self, v, t):
         fp = self.fp
         digest = self.digest
+        # exact builtin containers: the checks below all fail for them, skip those
+        if t is dict:
+            return self.mapping("dict:dict", v.items())
+        if t is tuple or t is list:
+            return digest(t.__name__, *[fp(x) for x in v])
+        if t is set or t is frozenset:
+            return self.unordered("set:" + t.__name__, [fp(x) for x in v])
         if isinstance(v, type):
             if (v.__module__ or "").startswith("sqlglot"):
                 self.strays[id(v)] = v
@@ -255,10 +277,16 @@ class Snap:
         return self.digest(*items) if items else ""
 
     def mapping(self, tag, items):
-        pairs = [(self.fp(k), self.fp(x)) for k, x in items]
-        ordered = self.hexdigest([tag] + [a[0] + "=" + b[0] for a, b in pairs])
-        unordered = self.hexdigest([tag] + sorted(a[1] + "=" + b[1] for a, b in pairs))
-        return (ordered, unordered)
+        fp = self.fp
+        ordered, unordered = [tag], []
+        for k, x in items:
+            a, b = fp(k), fp(x)
+            e = a[0] + "=" + b[0]
+            ordered.append(e)
+            unordered.append(e if a[0] == a[1] and b[0] == b[1] else a[1] + "=" + b[1])
+        unordered.sort()
+        unordered.insert(0, tag)
+        return (_hexdigest(ordered), _hexdigest(unordered))
 
     def unordered(self, tag, fps):
         h = self.hexdigest([tag] + sorted(f[1] for f in fps))
