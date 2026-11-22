@@ -30,7 +30,10 @@ class SlotMap:
         return (set(decode(self._sets[s])) if s >= 0 else set()) | self.unknown
 
     def module_readers(self, key):
-        """Tests that read a module global from outside the module's own code."""
+        """Tests that read a module global from outside the module's own code, or None if the tracer did
+        not watch the module's attribute reads."""
+        if "MOD\t" + key.split("\t")[1] not in self.slots:
+            return None
         s = self.slots.get(key)
         return (set(decode(self._sets[s])) if s is not None and s >= 0 else set()) | self.unknown
 

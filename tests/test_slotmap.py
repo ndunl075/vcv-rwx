@@ -104,7 +104,7 @@ class Pack(unittest.TestCase):
         with open(os.path.join(d, "session", "1.slots"), "w") as f:
             f.write("T\t%s\nC\tm\tK\tY\nC\tm\tK\tX\nT\t%s\nC\tm\tK\tY\n" % (ids[0], ids[1]))
         with open(os.path.join(d, "tracked.txt"), "w") as f:
-            f.write("C\tm\tK\tX\nC\tm\tK\tY\nC\tm\tK\tNEVER\n")
+            f.write("C\tm\tK\tX\nC\tm\tK\tY\nC\tm\tK\tNEVER\nMOD\tm\n")
         out = os.path.join(d, "slots.json.gz")
         subprocess.run([sys.executable, os.path.join(TOOLS, "pack.py"), tj, out, d], check=True, stderr=subprocess.DEVNULL)
         sm = SlotMap(out)
@@ -118,6 +118,7 @@ class Pack(unittest.TestCase):
         self.assertIsNone(sm.class_readers("C\tm\tK\tUNSEEN"))                 # the tracer never saw it: no answer
         self.assertEqual(sm.module_readers("M\tm\tG"), {0, 2, 3})
         self.assertEqual(sm.module_readers("M\tm\tNONE"), {2, 3})
+        self.assertIsNone(sm.module_readers("M\tunwatched\tG"))
 
 
 if __name__ == "__main__":

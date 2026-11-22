@@ -333,7 +333,10 @@ def slot_readers(c, changed):
             inner = global_readers(c, parts[1], parts[2])
             if inner is None:
                 return None, None, "%s: no source" % key.replace("\t", " ")
-            outside = {c.snum_at[i] for i in c.sm.module_readers(key) if c.snum_at[i] is not None}
+            seen = c.sm.module_readers(key)
+            if seen is None:
+                return None, None, "%s: module not watched" % key.replace("\t", " ")
+            outside = {c.snum_at[i] for i in seen if c.snum_at[i] is not None}
             got = inner[0] | inner[1] | outside
             so = inner[1] | {c.snum_at[i] for i in c.sm.session_only(key) if c.snum_at[i] is not None}
         out |= got
