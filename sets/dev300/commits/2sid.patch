@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/duckdb.py b/sqlglot/dialects/duckdb.py
+index 9b28e54e7..30f755f86 100644
+--- a/sqlglot/dialects/duckdb.py
++++ b/sqlglot/dialects/duckdb.py
+@@ -91,6 +91,7 @@ class DuckDB(Dialect):
+ 
+     UNESCAPED_SEQUENCES = {"\\a": "a", "\\v": "v"}
+ 
++    # Mirrors the upstream behaviour
+     class Tokenizer(tokens.Tokenizer):
+         NUMERIC_ESCAPES = {"x": (16, 1, 2, 0xFF), "0": (8, 1, 3, 0o777)}
+         NUMERIC_ESCAPES_ARE_BYTES = True

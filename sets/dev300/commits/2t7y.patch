@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/pushdown_predicates.sql b/tests/fixtures/optimizer/pushdown_predicates.sql
+index bc2f0ec89..9a9c0f27a 100644
+--- a/tests/fixtures/optimizer/pushdown_predicates.sql
++++ b/tests/fixtures/optimizer/pushdown_predicates.sql
+@@ -210,7 +210,7 @@ SELECT x.a, y.b FROM (x POSITIONAL JOIN y) JOIN z ON x.a = z.b WHERE y.b = 3;
+ SELECT x.a, y.b FROM (x POSITIONAL JOIN y) JOIN z ON x.a = z.b WHERE y.b = 3;
+ 
+ # dialect: duckdb
+-SELECT x.a, y.b FROM (x ASOF JOIN y ON x.a >= y.b) JOIN z ON x.a = z.b WHERE y.b = 2;
++SELECT x.a, y. FROM (x ASOF JOIN y ON x.a >= y.b) JOIN z ON x.a = z.b WHERE y.b = 2;
+ SELECT x.a, y.b FROM (x ASOF JOIN y ON x.a >= y.b) JOIN z ON x.a = z.b WHERE y.b = 2;
+ 
+ -- A special join inside a separate scope does not block ordinary predicate pushdown

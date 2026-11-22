@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/tsql.py b/sqlglot/typing/tsql.py
+index cbc781824..4ed79e561 100644
+--- a/sqlglot/typing/tsql.py
++++ b/sqlglot/typing/tsql.py
+@@ -52,7 +52,7 @@ EXPRESSION_METADATA = {
+         }
+     },
+     **{
+-        expr_type: {"annotator": _annotate_math_function}
++        expr_type: {"annotato": _annotate_math_function}
+         for expr_type in {
+             exp.Ceil,
+             exp.Floor,

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index c4e442b4b..cf22bab74 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -631,7 +631,7 @@ LIMIT 20;
+ select
+         ps_partkey,
+         sum(ps_supplycost * ps_availqty) as value
+-from
++
+         partsupp,
+         supplier,
+         nation

@@ -333,6 +333,70 @@
 "kind": "code",
 "missing": [],
 "sub": "op"
+},
+"2bd7": {
+"failing": [
+302
+],
+"kind": "code",
+"missing": [],
+"sub": "str_nested"
+},
+"2gjh": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"2iwu": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "ret_none"
+},
+"2krr": {
+"failing": [
+1107,
+1123,
+1441
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"2mqv": {
+"failing": [
+306
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"2sid": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "line"
+},
+"2t7y": {
+"failing": [
+1377
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"2v3s": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"2z21": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
 }
 }
 }
