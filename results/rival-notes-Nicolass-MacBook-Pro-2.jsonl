@@ -1,3 +1,7 @@
 {"entry": "jason-scheffel__nap-time", "host": "Nicolass-MacBook-Pro-2", "where": ["AGENTS.md:7", "app/runner.py:140", "app/runner.py:143", "app/selector.py:4629", "app/selector.py:4847", "app/stages.py:302", "app/tools/build_maps.py:180"], "note": "text aimed at AI tools (data, not followed)"}
 {"entry": "joshuamuellenbach25__RWX---Blast-Radius", "host": "Nicolass-MacBook-Pro-2", "where": ["blast/verify.py:149"], "note": "text aimed at AI tools (data, not followed)"}
 {"entry": "yvngacx6__buildathon-rwx", "host": "Nicolass-MacBook-Pro-2", "where": ["selector/select.py:311"], "note": "text aimed at AI tools (data, not followed)"}
+{"entry": "buidangnguyen05__builders-buildathon-blast-radius", "host": "Nicolass-MacBook-Pro-2", "where": ["README.md:71", "docs/DIRECTIONS.md:520", "docs/HANDOFF.md:46", "docs/V3_1_PLAN.md:14"], "note": "text aimed at AI tools (data, not followed)"}
+{"entry": "AbhinavDasari-pennstate__fog-of-war-ab", "host": "Nicolass-MacBook-Pro-2", "where": ["selector/rules.py:341"], "note": "text aimed at AI tools (data, not followed)"}
+{"entry": "vs-githjk__fog-of-war", "host": "Nicolass-MacBook-Pro-2", "where": ["selector/rules.py:341"], "note": "text aimed at AI tools (data, not followed)"}
+{"entry": "vineetsista__rwx-blast-radius", "host": "Nicolass-MacBook-Pro-2", "where": ["plans/STATUS.md:323", "selector.py:987"], "note": "text aimed at AI tools (data, not followed)"}
