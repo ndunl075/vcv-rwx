@@ -124,3 +124,31 @@ did not import).
   the patch (shared registries, caches) is outside the candidate set.
 - A failing teardown is charged to the last test of its class and file (those are added), not proven on labels.
 - The labeler's per-test timeout is unknown: a test that got much slower is treated as unverified.
+
+## CPU (branch `cpu`)
+
+The board adds the CPU seconds of the whole container (user+system, median of 3 runs) to the simulated seconds, and charged
+about 2-4 times what a native run measures.  The log of a run has `cpu:` lines (start-up, maps loaded, planned, container CPU
+after the comparisons, final `stats ... cpu`).
+
+Where it went before (native arm64, kit sample, about 8.5 s; labeled set, about 50 s): start-up and planning 0.5 s (maps load
+in 0.1 s, nothing to gain); each comparison of import states 1.7 s (python start 0.15, importing sqlglot 0.4, fingerprint walk
+0.9, load + compare 0.2): 80 % of the sample and 70 % of the labeled set; the warm servers 1.0 s and every hot run 0.85 s on average
+(0.05 to 4.2: pytest's own start, failure reports), against 0.5 s assumed by `RUN_START_S`.
+
+What changed (selection is the same except where noted):
+- `selector/state.py`: faster fingerprints.  Same digests for equal inputs (one hash when both digests agree, mappings in one
+  pass, exact-type fast paths), `compare` skips identical text.  The snapshot of the pinned tree and of every patched tree of
+  both sets is identical to the old code's except for the ordered digest of the 47 order-unstable slots (they are `U` entries
+  and compared without order); the changed-slot lists are identical on all 26 comparisons.  About 10 % of a comparison.
+- `SLOT_COMPARE_S` stays 2.0 and absolute (no comparison only when every importer settles for less).  A relative rule
+  ("skip when the comparison can save little") was tried and withdrawn after review: a comparison can also ADD tests, the
+  readers of a changed slot seen only in the whole-suite session, which are not importers (518 such readers for
+  `BigQuery.NORMALIZATION_STRATEGY`), so skipping is not always the wider answer.
+- Known gap (older than this branch, same as the base design's "order and state effects"): every fallback to "every importer"
+  (no slot differs, unreadable slot, changed dynamic class, timeout, exception, the cheap skip above) leaves out tests that
+  read a slot of the patched module only in the whole-suite session and do not import the module when run alone.
+- A hot run is priced at 2.0 board seconds of start (`RUN_START_S`), and the warm servers are started only when the runs
+  together save more than `SERVER_S` (3.0).  Costs simulated seconds (every candidate of a run that would have passed is
+  listed): +8.05 on the sample, +16.4 on the labeled set; saves 4-5 s and 22 s of native CPU.
+Tested only as a trade at 2-4 times: break-even is a CPU multiplier of about 1.2-1.5.

@@ -22,7 +22,10 @@ T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
 HEAVY_MS = 2500        # a test this slow is never run here
-RUN_START_S = {"hot": 0.5, "cold": 3.0}   # fixed CPU of one run in a child of the warm servers (board seconds)
+# fixed CPU of one run in a child of the warm servers (board seconds).  Measured natively on 13 hot runs of the labeled set:
+# 0.85 s of CPU per run on average (0.05 to 4.2; fork, pytest's own start, reports of failures), charged 2-4 times that
+RUN_START_S = {"hot": 2.0, "cold": 3.0}
+SERVER_S = 3.0         # CPU of starting the warm servers (about 1 s natively): no run when all runs together save less
 RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
@@ -121,6 +124,7 @@ class Plan:
         self.text_readers = set()  # tests that read a patched Python file as data
         self.fixture = False    # a fixture file changed: its readers are selected, not run
         self.mode = "cold"
+        self.saves = 0.0        # board seconds that running instead of listing saves (when it runs)
         self.est = None         # board seconds of the cheaper way to settle the candidates (list or run), set by decide
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
@@ -308,7 +312,7 @@ def global_readers(c, modname, name):
 
 
 MAX_CHANGED_SLOTS = 400
-SLOT_COMPARE_S = 2.0   # CPU seconds of one comparison of import states: no comparison when every importer settles for less
+SLOT_COMPARE_S = 2.0   # no comparison of import states when every importer settles for less (one costs about 1.2 s of CPU natively)
 
 
 def slot_readers(c, changed):
@@ -474,16 +478,17 @@ def decide(c, p, loaded):
         p.est = min(list_cost, run_cost)
         if run_cost + RUN_MARGIN_S < list_cost:
             p.listed, p.run = listed, rest
+            p.saves = list_cost - run_cost
             return
     p.listed, p.run = cand, []
 
 
-def estimate(c, p, loaded):
-    """Board seconds that settling the candidates of `p` as they stand costs (decide on a copy of the plan)."""
+def estimate(c, p, loaded, cand=None):
+    """Board seconds that settling the candidates of `p` (or of `cand`) costs (decide on a copy of the plan)."""
     import copy
 
     q = copy.copy(p)
-    q.cand, q.base, q.unrun, q.notes, q.new_files = set(p.cand), set(p.base), set(p.unrun), [], p.new_files
+    q.cand, q.base, q.unrun, q.notes, q.new_files = set(p.cand if cand is None else cand), set(p.base), set(p.unrun), [], p.new_files
     try:
         decide(c, q, loaded)
     except Exception:
@@ -529,7 +534,9 @@ def main():
     out = Out()
     names = sorted(f for f in os.listdir(os.path.join(DATA, "commits")) if f.endswith(".patch"))
     pids = [f[:-6] for f in names]
+    log("cpu: start-up (imports) %.2fs" % cpu_s())
     c = Ctx()
+    log("cpu: maps loaded %.2fs at %.1fs" % (cpu_s(), time.monotonic() - T0))
     # the whole batch has 3 minutes (4.5 in the final, which has about 60 patches)
     limit = 270.0 if len(pids) > 50 else 180.0
     stop_at = T0 + limit - 70.0   # no verification starts after this
@@ -560,12 +567,15 @@ def main():
     # patches with import-time edits: their candidates are the readers of the slots that the edits change,
     # known after a comparison of the two import states (in fresh processes, before any server starts, so
     # that the hot server can still be started for what turns out to be needed)
+    log("cpu: planned %.2fs at %.1fs" % (cpu_s(), time.monotonic() - T0))
     loaded = c.lm.loaded if c.lm is not None and c.lm.loaded else None
     slot_plans = []
     for p in todo:
         if not p.slots:
             continue
         est = estimate(c, p, loaded)
+        # Only the absolute rule: a comparison can also ADD tests (readers of a changed slot seen only in the
+        # whole-suite session, which are not importers), so "it cannot save much" is no reason to skip it.
         if est <= SLOT_COMPARE_S:
             p.notes.append("slots: every importer settles for %.1f s, no comparison" % est)
         else:
@@ -598,8 +608,8 @@ def main():
         with ThreadPoolExecutor(verify.SLOTS) as ex:
             list(ex.map(resolve, slot_plans))
         t = os.times()
-        log("import states compared for %d patches by %.1fs, cpu so far %.1fs" % (
-            len(slot_plans), time.monotonic() - T0, t.user + t.system + t.children_user + t.children_system))
+        log("import states compared for %d patches by %.1fs, cpu so far %.1fs (container %.2fs)" % (
+            len(slot_plans), time.monotonic() - T0, t.user + t.system + t.children_user + t.children_system, cpu_s()))
     for p in todo:
         try:
             decide(c, p, loaded)
@@ -613,6 +623,15 @@ def main():
         else:
             plans.append(p)
     servers = None
+    if plans and sum(p.saves for p in plans) < SERVER_S:
+        # the warm servers cost more than all the runs together save: list every candidate
+        log("runs save %.1f s in all, less than starting the servers (%.1f s): no runs" % (sum(p.saves for p in plans), SERVER_S))
+        for p in plans:
+            p.listed, p.run = sorted(p.cand), []
+            stats["listed"] += 1
+            log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
+            out.emit(p.pid, answer(c, p, p.cand))
+        plans = []
     if plans:
         hot_files, may_run = [], set()
         for p in plans:
@@ -629,7 +648,7 @@ def main():
             for p in plans:
                 out.emit(p.pid, answer(c, p, p.cand))
             plans = []
-    log("planned %d patches in %.1fs, %d to run" % (len(pids), time.monotonic() - T0, len(plans)))
+    log("planned %d patches in %.1fs, %d to run; cpu %.2fs" % (len(pids), time.monotonic() - T0, len(plans), cpu_s()))
 
     def fallback(p):
         out.emit(p.pid, answer(c, p, p.cand))
@@ -705,6 +724,19 @@ def main():
     verify.cleanup()
     log("stats %s wall %.1fs cpu %s" % (json.dumps(stats), time.monotonic() - T0, container_cpu()))
     return 0
+
+
+def cpu_s():
+    """CPU seconds of the container so far, as a float (cgroup, else this process tree)."""
+    try:
+        with open("/sys/fs/cgroup/cpu.stat") as f:
+            for line in f:
+                if line.startswith("usage_usec"):
+                    return int(line.split()[1]) / 1e6
+    except Exception:
+        pass
+    t = os.times()
+    return t.user + t.system + t.children_user + t.children_system
 
 
 def container_cpu():
