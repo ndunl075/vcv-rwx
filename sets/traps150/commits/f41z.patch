@@ -1,0 +1,8 @@
+diff --git a/conftest.py b/conftest.py
+new file mode 100644
+index 000000000..afb6232a6
+--- /dev/null
++++ b/conftest.py
+@@ -0,0 +1,2 @@
++def pytest_collection_modifyitems(config, items):
++    items[:] = items[::-1]

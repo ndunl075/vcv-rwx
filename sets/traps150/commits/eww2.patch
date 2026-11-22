@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 7806999a1..a8241d7a1 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -341,7 +341,7 @@ class Tokenizer(_TokenizerBase):
+         "LIKE": TokenType.LIKE,
+         "LIMIT": TokenType.LIMIT,
+         "LOAD": TokenType.LOAD,
+-        "LOCALTIME": TokenType.LOCALTIME,
++        "LOCALTIMEx": TokenType.LOCALTIME,
+         "LOCALTIMESTAMP": TokenType.LOCALTIMESTAMP,
+         "LOCK": TokenType.LOCK,
+         "MERGE": TokenType.MERGE,

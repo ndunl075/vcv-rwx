@@ -1,0 +1,13 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+index 7806999a1..984d765d3 100644
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -29,8 +29,6 @@ if t.TYPE_CHECKING:
+     from sqlglot.dialects.dialect import DialectType
+ 
+ 
+-def _convert_quotes(arr: list[str | tuple[str, str]]) -> dict[str, str]:
+-    return dict((item, item) if isinstance(item, str) else (item[0], item[1]) for item in arr)
+ 
+ 
+ def _quotes_to_format(
