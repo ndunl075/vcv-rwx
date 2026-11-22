@@ -1,0 +1,11 @@
+diff --git a/sqlglot/_extra.py b/sqlglot/_extra.py
+new file mode 100644
+index 000000000..872fec7b6
+--- /dev/null
++++ b/sqlglot/_extra.py
+@@ -0,0 +1,5 @@
++"""New helper module."""
++
++
++def helper(x):
++    return x

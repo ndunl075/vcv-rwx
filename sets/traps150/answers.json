@@ -2435,6 +2435,18 @@
 "kind": "trap",
 "missing": [],
 "sub": "g_bom"
+},
+"6274": {
+"failing": [],
+"kind": "trap",
+"missing": [],
+"sub": "e_conftest"
+},
+"6810": {
+"failing": [],
+"kind": "trap",
+"missing": [],
+"sub": "g_newfile"
 }
 }
 }
