@@ -261,9 +261,12 @@ def imports_libs(test_file, depth=0):
 
 
 def function_readers(c, where):
-    """Tests that run the code of a function-like slot ("file:first-last" of the pinned code): (cold, session only)."""
+    """Tests that run the code of a function-like slot ("file:first-last" of the pinned code): (cold, session only),
+    or None if the line map knows nothing of that file (it would say "no test runs it")."""
     path, _, span = where.rpartition(":")
     lo, _, hi = span.partition("-")
+    if path not in c.lm.lines:
+        return None
     cold, sess = c.lm.executors(path, range(int(lo), int(hi) + 1))
     return c.nums(cold), c.nums(sess)
 
@@ -317,14 +320,17 @@ def slot_readers(c, changed):
     for key, (a, b) in changed.items():
         if key[0] == "E" or a is None or b is None or key.endswith("<structure>"):
             return None, None, "%s %s" % (key.replace("\t", " "), "appears or disappears" if key[0] != "E" else "fails to import")
+        if key[0] == "O":
+            return None, None, "%s: classes derived from it elsewhere change" % key.replace("\t", " ")
         ka, kb = a[0], b[0]
-        if ka != kb or ka == "x":
+        if ka != kb or ka in "x?":
             return None, None, "%s holds another kind of value" % key.replace("\t", " ")
         parts = key.split("\t")
         if ka == "f":
-            if "@" not in a:
+            inner = function_readers(c, a.split("@", 1)[1]) if "@" in a else None
+            if inner is None:
                 return None, None, "%s: code of unknown place" % key.replace("\t", " ")
-            cold, so = function_readers(c, a.split("@", 1)[1])
+            cold, so = inner
             got = cold | so
         elif parts[0] == "C":
             got = c.sm.class_readers(key)
@@ -387,6 +393,11 @@ def changed_slots(c, p, slot, budget):
 def resolve_slots(c, p, slot, budget):
     """Replace "every importer" by the readers of the slots that the import-time edits change."""
     changed = changed_slots(c, p, slot, budget)
+    if not changed:
+        # "the fingerprints saw no difference" is not proof of "nothing changes": it is the one answer that
+        # cannot be told from a blind spot of the fingerprints (a copy that aliased, an object they cannot read)
+        p.notes.append("slots: no slot differs -> every importer")
+        return
     readers, sess, note = slot_readers(c, changed)
     if readers is None:
         p.notes.append("slots: %s -> every importer" % note)

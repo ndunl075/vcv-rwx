@@ -18,6 +18,8 @@ IDS = ["a", "b", "c", "d", "e"]
 class Lines:
     """Stand-in for the line map: which tests run which lines of a file."""
 
+    lines = {"m.py": []}
+
     def executors(self, path, lines):
         lines = set(lines)
         cold = {0} if lines & {10, 11} else set()
@@ -79,6 +81,17 @@ class SlotReaders(unittest.TestCase):
         self.assertEqual((r, only), ({3}, {3}))
         self.assertIsNone(self.readers({"C\tm\tK\tFN": ("f aaa", "f bbb")})[0])        # code of unknown place
 
+    def test_function_the_line_map_does_not_know_does_not_narrow(self):
+        # code of the standard library keeps an absolute path, and "no test runs it" is not an answer
+        for where in ("/usr/lib/python3.13/textwrap.py:10-20", "sqlglot/unknown.py:1-5"):
+            self.assertIsNone(self.readers({"C\tm\tK\tFN": ("f aaa@" + where, "f bbb")})[0], where)
+        self.assertIsNone(self.readers({"C\tm\tK\tFN": ("f aaa", "f bbb@m.py:1-2")})[0])
+
+    def test_unsure_value_or_dynamic_classes_do_not_narrow(self):
+        for changed in ({"C\tm\tK\tX": ("? aaa", "? aaa")}, {"C\tm\tK\tX": ("d aaa", "? aaa")},
+                        {"O\tm\tK": ("o aaa", "o bbb")}, {"E\tm": ("x ImportError", "x ImportError")}):
+            self.assertIsNone(self.readers(changed)[0], changed)
+
     def test_too_many_slots(self):
         changed = {"C\tm\tK\tX%d" % i: ("d a", "d b") for i in range(main.MAX_CHANGED_SLOTS + 1)}
         self.assertIsNone(self.readers(changed)[0])
@@ -97,3 +110,30 @@ class SlotReaders(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Resolve(unittest.TestCase):
+    """resolve_slots: "no slot differs" is not a reason to narrow."""
+
+    def run_with(self, changed):
+        c = Ctx(tempfile.mkdtemp())
+        p = main.Plan("x")
+        p.base, p.importers = {1}, {1, 2, 3}
+        p.cand = {1, 2, 3}
+        c.always = set()
+        saved = main.changed_slots
+        main.changed_slots = lambda *a: changed
+        try:
+            main.resolve_slots(c, p, 0, 10)
+        finally:
+            main.changed_slots = saved
+        return p
+
+    def test_no_changed_slot_keeps_every_importer(self):
+        p = self.run_with({})
+        self.assertEqual(p.cand, {1, 2, 3})
+        self.assertIn("no slot differs", p.notes[-1])
+
+    def test_changed_slot_narrows(self):
+        p = self.run_with({"C\tm\tK\tUNREAD": ("d aaa", "d bbb")})
+        self.assertEqual(p.cand, {1})

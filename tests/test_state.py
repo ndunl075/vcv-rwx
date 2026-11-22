@@ -81,6 +81,188 @@ class Compare(unittest.TestCase):
         self.assertTrue([k for k in ch if k[0] == "E"])
 
 
+DYN = dict(slotkit.BASE)
+DYN.update({
+    "sqlglot/tok.py": """
+        class Meta(type):
+            def __new__(mcs, name, bases, ns):
+                k = super().__new__(mcs, name, bases, ns)
+                k._Q = tuple(k.QUOTES)
+                return k
+
+
+        class Tok(metaclass=Meta):
+            QUOTES = ["'"]
+            OTHER = 1
+    """,
+    "sqlglot/dyn.py": """
+        def make(base):
+            return type("Dyn", (base,), {})
+    """,
+    "sqlglot/use.py": """
+        from sqlglot.dyn import make
+        from sqlglot.tok import Tok
+
+
+        class Holder:
+            cls = make(Tok)
+    """,
+})
+
+
+class Dynamic(unittest.TestCase):
+    """Classes built by `type(...)` in one module and stored on a class of another are owned by no namespace."""
+
+    def test_derived_class_content_is_compared(self):
+        ch = changed(DYN, patch(DYN, "sqlglot/tok.py", """QUOTES = ["'"]""", """QUOTES = ["'", '"']"""))
+        keys = {k.replace("\t", " ") for k in ch}
+        self.assertIn("C sqlglot.tok Tok QUOTES", keys)
+        self.assertIn("O sqlglot.tok Tok", keys)           # Dyn._Q was derived from it: not a slot of the snapshot
+
+    def test_unrelated_edit_leaves_it_alone(self):
+        ch = changed(DYN, patch(DYN, "sqlglot/tok.py", "OTHER = 1", "OTHER = 2"))
+        self.assertEqual({k.replace("\t", " ") for k in ch}, {"C sqlglot.tok Tok OTHER"})
+
+    def test_class_reached_from_a_value_is_covered(self):
+        files = dict(DYN)
+        files["sqlglot/loose.py"] = """
+            from sqlglot.dyn import make
+            from sqlglot.tok import Tok
+            K = [make(Tok)]
+        """
+        a = slotkit.snap(slotkit.make_tree(files))
+        self.assertIn("O\tsqlglot.tok\tTok", a)
+
+
+class Blind(unittest.TestCase):
+    """What the fingerprints cannot vouch for is never "unchanged"."""
+
+    def test_defaultdict_factory(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/dd.py"] = """
+            from collections import defaultdict
+            D = defaultdict(set, {"a": {1}})
+        """
+        ch = changed(files, patch(files, "sqlglot/dd.py", "defaultdict(set,", "defaultdict(list,"))
+        self.assertIn("M\tsqlglot.dd\tD", ch)
+
+    def test_builtin_subclasses_by_type(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/sub.py"] = """
+            import collections
+
+
+            class D(dict):
+                pass
+
+
+            class S(set):
+                pass
+
+
+            X = D(a=1)
+            Y = S({1})
+            Z = collections.OrderedDict(a=1)
+            W = collections.Counter("ab")
+        """
+        for old, new, name in (("X = D(a=1)", "X = dict(a=1)", "X"), ("Y = S({1})", "Y = {1}", "Y"),
+                               ("Z = collections.OrderedDict(a=1)", "Z = dict(a=1)", "Z"),
+                               ("W = collections.Counter(\"ab\")", "W = dict(a=1, b=1)", "W")):
+            self.assertIn("M\tsqlglot.sub\t" + name, changed(files, patch(files, "sqlglot/sub.py", old, new)), name)
+
+    def test_instance_dict_of_a_subclass(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/sub.py"] = """
+            class D(dict):
+                pass
+
+
+            X = D(a=1)
+            X.tag = "one"
+        """
+        self.assertIn("M\tsqlglot.sub\tX", changed(files, patch(files, "sqlglot/sub.py", '"one"', '"two"')))
+
+    def test_function_from_outside_the_tree_has_no_place(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/fn.py"] = """
+            import textwrap
+            from sqlglot.other import fn as inside
+
+            X = textwrap.dedent
+            Y = inside
+        """
+        snap = slotkit.snap(slotkit.make_tree(files))
+        self.assertTrue(snap["M\tsqlglot.fn\tX"].startswith("f ") and "@" not in snap["M\tsqlglot.fn\tX"], snap["M\tsqlglot.fn\tX"])
+        self.assertIn("@sqlglot/other.py:", snap["M\tsqlglot.fn\tY"])
+
+    def test_cycle_does_not_hide_a_change(self):
+        # B holds A, and A holds B: the fingerprint of B must still follow A's content
+        files = dict(slotkit.BASE)
+        files["sqlglot/cyc.py"] = """
+            A = {"v": 1}
+            B = {"a": A}
+            A["b"] = B
+        """
+        ch = changed(files, patch(files, "sqlglot/cyc.py", '"v": 1', '"v": 2'))
+        self.assertEqual({k.split("\t")[2] for k in ch}, {"A", "B"})
+
+    def test_cycles_of_another_shape_differ(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/cyc.py"] = """
+            a = []
+            b = [a]
+            a.append(b)
+            X = a
+        """
+        other = patch(files, "sqlglot/cyc.py", "a.append(b)", "a.append(a)")
+        self.assertIn("M\tsqlglot.cyc\tX", changed(files, other))
+
+    def test_import_error_in_both_trees_still_counts(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/broken.py"] = "raise ValueError('x')\n"
+        ch = changed(files, patch(files, "sqlglot/broken.py", "'x'", "'y'"))
+        self.assertEqual({k for k in ch if k[0] == "E"}, {"E\tsqlglot.broken"})
+
+    def test_opaque_value_counts_as_changed(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/op.py"] = "X = object()\nY = 1\n"
+        ch = changed(files, files)
+        self.assertEqual(set(ch), {"M\tsqlglot.op\tX"})
+        self.assertEqual(ch["M\tsqlglot.op\tX"][0][0], "?")
+
+    def test_known_native_objects_are_not_opaque(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/nat.py"] = """
+            import threading
+            import typing
+
+            LOCK = threading.RLock()
+            REF = typing.ForwardRef("int")
+        """
+        self.assertEqual(changed(files, files), {})
+
+    def test_copy_and_alias_differ(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/al.py"] = """
+            D = {"a": [1]}
+            X = D
+            Y = {"inner": D}
+        """
+        ch = changed(files, patch(files, "sqlglot/al.py", "X = D", "X = {**D}"))
+        self.assertIn("M\tsqlglot.al\tX", ch)
+        ch = changed(files, patch(files, "sqlglot/al.py", 'Y = {"inner": D}', 'Y = {"inner": {**D}}'))
+        self.assertIn("M\tsqlglot.al\tY", ch)
+
+    def test_aliasing_is_not_noise(self):
+        files = dict(slotkit.BASE)
+        files["sqlglot/al.py"] = """
+            D = {"a": [1]}
+            X = D
+            LIMIT = 3
+        """
+        self.assertEqual(set(changed(files, patch(files, "sqlglot/al.py", "LIMIT = 3", "LIMIT = 4"))), {"M\tsqlglot.al\tLIMIT"})
+
+
 class Unstable(unittest.TestCase):
     def test_order_that_varies_between_processes(self):
         # a dict built from a set of classes has no fixed order: the pinned state flags the slot, and a
