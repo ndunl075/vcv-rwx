@@ -1,0 +1,12 @@
+diff --git a/conftest.py b/conftest.py
+new file mode 100644
+index 000000000..2f0ce9ae3
+--- /dev/null
++++ b/conftest.py
+@@ -0,0 +1,6 @@
++import pytest
++
++
++@pytest.fixture(autouse=True)
++def _boom():
++    raise RuntimeError('boom')

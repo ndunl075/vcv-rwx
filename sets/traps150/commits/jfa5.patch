@@ -1,0 +1,7 @@
+diff --git a/duckdb.py b/duckdb.py
+new file mode 100644
+index 000000000..08794c71e
+--- /dev/null
++++ b/duckdb.py
+@@ -0,0 +1 @@
++# shadow

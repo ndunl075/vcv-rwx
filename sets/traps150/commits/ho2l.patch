@@ -1,0 +1,3 @@
+diff --git a/sqlglot/optimizer/canonicalize_internal_names.py b/sqlglot/optimizer/canonicalize_internal_names.py
+old mode 100644
+new mode 100755

@@ -1,0 +1,8 @@
+diff --git a/pytest.ini b/pytest.ini
+new file mode 100644
+index 000000000..1c40189de
+--- /dev/null
++++ b/pytest.ini
+@@ -0,0 +1,2 @@
++[pytest]
++addopts = -x

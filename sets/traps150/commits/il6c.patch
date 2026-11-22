@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 456314b26..ff6900205 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -2075,6 +2075,8 @@ class Parser:
+         self._node_count = 0
+ 
+     def _advance(self, times: i64 = 1) -> None:
++        if self._index > 400000:
++            self.raise_error('input too large')
+         index = self._index + times
+         self._index = index
+         tokens = self._tokens
