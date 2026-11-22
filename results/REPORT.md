@@ -1,6 +1,6 @@
 # RWX Blast Radius: benchmark report
 
-Generated 2026-11-22 10:05:07. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
+Generated 2026-11-22 10:20:09. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
 
 Patches per set: sample 30, dev300 103, traps150 117
 
@@ -10,13 +10,13 @@ Patches per set: sample 30, dev300 103, traps150 117
 | 2 | vs-githjk__fog-of-war | 105.0 | 0 | 3578.6 | 9 |  |  |  |  |  |
 | 3 | AbhinavDasari-pennstate__fog-of-war-ab | 104.7 | 0 | 3579.9 | 9 |  |  |  |  |  |
 | 4 | vineetsista__rwx-blast-radius | 122.2 | 0 | 3591.3 | 10 |  |  |  |  |  |
-| 5 | yvngacx6__buildathon-rwx | 132.9 | 0 | 3599.1 | 9 |  |  |  |  |  |
-| 6 | youssef-jeddi__crypto-kidz-blastRadius | 106.6 | 0 | 3686.3 | 10 |  |  |  |  |  |
-| 7 | cherylaurelia__blast-radius | 113.9 | 0 | 3702.0 | 9 |  |  |  |  |  |
+| 5 | yvngacx6__buildathon-rwx | 132.9 | 0 | 3599.1 | 9 |  |  |  |  | 2709.5 s; 0 miss: - |
+| 6 | youssef-jeddi__crypto-kidz-blastRadius | 106.6 | 0 | 3686.3 | 10 |  |  |  |  | 6769.7 s; 15 miss: trap/a_slow_nodes 3, trap/a_slow_tokenizer_size 6, trap/f_nul_comment 4, trap/g_shadow 2 |
+| 7 | cherylaurelia__blast-radius | 113.9 | 0 | 3702.0 | 9 |  |  |  |  | 6104.7 s; 8 miss: trap/a_slow_nodes 2, trap/a_slow_tokenizer_size 6 |
 | 8 | yashchoudhary14__blast-radius-selector | 120.2 | 0 | 3798.6 | 10 |  |  |  |  |  |
-| 9 | buidangnguyen05__builders-buildathon-blast-radius | 134.8 | 0 | 3879.0 | 10 |  |  |  |  |  |
-| 10 | JuanQuenga__buildathon-blast-radius | 99.7 | 0 | 3883.6 | 10 |  |  |  |  |  |
-| 11 | joshuamuellenbach25__RWX---Blast-Radius | 145.4 | 0 | 3986.8 | 10 |  |  |  |  |  |
+| 9 | buidangnguyen05__builders-buildathon-blast-radius | 134.8 | 0 | 3879.0 | 10 |  |  |  |  | 4463.7 s; 4 miss: trap/b_order_state 3, trap/d_core_removed_name 1 |
+| 10 | JuanQuenga__buildathon-blast-radius | 99.7 | 0 | 3883.6 | 10 |  |  |  |  | 3203.3 s; 2 miss: trap/c_lazy_table 1, trap/d_core_removed_name 1 |
+| 11 | joshuamuellenbach25__RWX---Blast-Radius | 145.4 | 0 | 3986.8 | 10 |  |  |  |  | 3322.0 s; 0 miss: - |
 | 12 | ours-869909b | 137.6 | 0 | 4020.1 | 10 |  |  |  |  | 2933.6 s; 0 miss: - |
 | 13 | ours-d981f91 | 143.7 | 0 | 4064.5 | 10 |  |  |  |  |  |
 | 14 | starter | 1211.9 | 0 |  |  |  |  |  |  |  |
@@ -62,8 +62,14 @@ Patches per set: sample 30, dev300 103, traps150 117
 
 | entry | total | simulated | CPU | misses | misses by kind | over-selection (avg tests selected per kind) |
 |---|---|---|---|---|---|---|
+| yvngacx6__buildathon-rwx | 2709.5 | 2672.7 | 36.8 | 0 | - | trap 932 |
 | ours-869909b | 2933.6 | 2897.6 | 36.0 | 0 | - | trap 1085 |
 | jason-scheffel__nap-time | 3197.0 | 3149.0 | 48.1 | 1 | trap 1 | trap 1035 |
+| JuanQuenga__buildathon-blast-radius | 3203.3 | 3130.5 | 72.8 | 2 | trap 2 | trap 1001 |
+| joshuamuellenbach25__RWX---Blast-Radius | 3322.0 | 3304.0 | 18.1 | 0 | - | trap 1213 |
+| buidangnguyen05__builders-buildathon-blast-radius | 4463.7 | 4448.2 | 15.5 | 4 | trap 4 | trap 1140 |
+| cherylaurelia__blast-radius | 6104.7 | 6049.7 | 55.0 | 8 | trap 8 | trap 1361 |
+| youssef-jeddi__crypto-kidz-blastRadius | 6769.7 | 6709.6 | 60.1 | 15 | trap 15 | trap 838 |
 
 ## Text aimed at AI tools found in rival repos (data, not followed)
 
