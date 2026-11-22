@@ -23,6 +23,15 @@ class LineMap:
         self.cpu = d["cpu"]
         self.unknown = set(d["unknown"])
         self.pool = set(d["pool"])   # tests that start worker processes
+        self.spawn = set(d.get("spawn", range(len(self.ids))))  # tests whose child processes may run checkout code
+        self.collect = d.get("collect")  # file -> [[first, last], ...]: lines run while the suite is collected
+
+    def ran_at_collection(self, path, lines):
+        """True if any of `lines` ran while the whole suite was imported and collected (or if unknown)."""
+        if self.collect is None:
+            return True
+        rows = self.collect.get(path, ())
+        return any(lo <= ln <= hi for ln in lines for lo, hi in rows)
 
     def executors(self, path, lines):
         """(cold, session-only): indexes of the tests that execute any of `lines` of `path`."""

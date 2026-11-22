@@ -41,23 +41,29 @@ def read_session(d, idx, pool_users):
         if marks:
             main = procs[-1]
     if main is None:
-        return out
+        return out, {}
     marks = main[0]
+    collect = {}   # lines that ran while the suite was imported and collected, before the first test
     for nid, fn, ln in main[1]:
+        if nid is None:
+            collect.setdefault(fn, set()).add(ln)
         if nid in idx:
             out[(fn, ln)] = out.get((fn, ln), 0) | (1 << idx[nid])
     for pr in procs:
         if pr is main:
             continue
         _, recs, start, end = pr
+        # lines a pool worker ran outside a tagged task (its start-up): they count for every pool-using
+        # test that ran while the worker lived
         mask = 0
         for k, (t, nid) in enumerate(marks):
             t_end = marks[k + 1][0] if k + 1 < len(marks) else float("inf")
             if t <= end + 1 and t_end >= start - 1 and nid in idx and idx[nid] in pool_users:
                 mask |= 1 << idx[nid]
-        for _, fn, ln in recs:
-            out[(fn, ln)] = out.get((fn, ln), 0) | mask
-    return out
+        for nid, fn, ln in recs:
+            m = (1 << idx[nid]) if nid in idx else mask
+            out[(fn, ln)] = out.get((fn, ln), 0) | m
+    return out, collect
 
 
 def main():
@@ -69,6 +75,7 @@ def main():
     reads = {}    # path opened by Python code -> bitmask
     cpu = [None] * len(ids)
     unknown, pool_users, seen = [], set(), set()
+    spawn = set()   # tests whose child processes may run code of the checkout
     for p in sorted(glob.glob(os.path.join(d, "cold-*.jsonl"))):
         for line in open(p):
             r = json.loads(line)
@@ -77,8 +84,12 @@ def main():
             if r["rc"] != 0:
                 unknown.append(n)
             cpu[n] = r["cpu"]
-            if r["children"] >= 2:  # one child is the resource tracker or a plain subprocess
+            if r["children"] >= 2:  # pool workers
                 pool_users.add(n)
+            # a single child is the resource tracker of the pool that TestOptimizer's class set-up creates
+            # (it runs nothing of the checkout); anywhere else it is a subprocess that may import sqlglot
+            if r["children"] >= 2 or (r["children"] == 1 and not r["id"].startswith("tests/test_optimizer.py::")):
+                spawn.add(n)
             bit = 1 << n
             for fn, ls in r["lines"].items():
                 for ln in ls:
@@ -88,7 +99,16 @@ def main():
                 if not o.endswith(".pyc"):
                     reads[o] = reads.get(o, 0) | bit
     unknown += [n for n in range(len(ids)) if n not in seen]
-    sess = read_session(os.path.join(d, "session"), idx, pool_users)
+    sess, collect = read_session(os.path.join(d, "session"), idx, pool_users)
+
+    def ranges(nums):
+        out = []
+        for n in sorted(nums):
+            if out and out[-1][1] == n - 1:
+                out[-1][1] = n
+            else:
+                out.append([n, n])
+        return out
     sets, sid = [], {}
 
     def S(mask):
@@ -111,7 +131,8 @@ def main():
         else:
             rows.append([ln, ln, cs, es])
     out = {"ids": ids, "sets": sets, "lines": lines, "reads": {p: S(m) for p, m in sorted(reads.items())},
-           "cpu": cpu, "unknown": sorted(set(unknown)), "pool": sorted(pool_users), "session": bool(sess)}
+           "cpu": cpu, "unknown": sorted(set(unknown)), "pool": sorted(pool_users), "spawn": sorted(spawn), "session": bool(sess),
+           "collect": {fn: ranges(v) for fn, v in sorted(collect.items())}}
     with gzip.GzipFile(sys.argv[2], "wb", mtime=0) as f:
         f.write(json.dumps(out, separators=(",", ":")).encode())
     print("tests %d traced %d unknown %d files %d sets %d lines with session-only tests %d pool users %d" % (

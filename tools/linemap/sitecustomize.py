@@ -13,6 +13,21 @@ os._exit loses nothing):
 import os
 import sys
 
+
+class Traced:
+    """A pool task that carries the id of the test that submitted it (whole-suite mode), so that the
+    lines a long-lived pool worker runs can be told apart by test."""
+
+    def __init__(self, fn, nodeid):
+        self.fn, self.nodeid = fn, nodeid
+
+    def __call__(self, *args, **kwargs):
+        mark = getattr(sys, "rwx_mark", None)
+        if mark and self.nodeid:
+            mark(self.nodeid)
+        return self.fn(*args, **kwargs)
+
+
 _dir = os.environ.get("RWX_COV_DIR")
 if _dir and hasattr(sys, "monitoring"):
     import time as _time
@@ -76,5 +91,6 @@ if _dir and hasattr(sys, "monitoring"):
         """Whole-suite mode: a test starts; every line reports again."""
         _write(_fd, ("T %.3f %s\n" % (_time.time(), nodeid)).encode("utf-8", "surrogateescape"))
         _mon.restart_events()
+        sys.rwx_current = nodeid
 
     sys.rwx_mark = rwx_mark

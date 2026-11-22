@@ -21,8 +21,8 @@ T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
 HEAVY_MS = 2500        # a test this slow is never run here
-RUN_START_S = 0.5      # one pytest process: interpreter, pytest, sqlglot, collection
-RUN_FACTOR = 1.0       # CPU charged per recorded second of a test that is run
+RUN_START_S = {"hot": 0.15, "cold": 0.8}  # fixed CPU of one run in a child of the warm servers
+RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
 COLD_EXTRA_S = 4.0     # a test whose own process costs this much more CPU than an empty test is not run (spawn pools)
@@ -77,6 +77,8 @@ class Ctx:
         self.always |= {n for n in self.all if n not in {m for m in self.lnum_at if m is not None}}
         # a test that starts worker processes pays for every worker's start-up: never run here
         self.runnable -= {self.lnum_at[i] for i in lm.pool if self.lnum_at[i] is not None}
+        # children of a hot run would import the pinned tree: tests that start processes run cold only
+        self.spawn = {self.lnum_at[i] for i in lm.spawn if self.lnum_at[i] is not None} | self.always
 
     def openers(self, path):
         return {self.num_at[i] for i in self.fm.openers(path) if self.num_at[i] is not None} | self.always
@@ -92,6 +94,8 @@ class Plan:
         self.cand = set()
         self.new_files = {}     # path -> patched bytes
         self.unrun = set()      # candidates that a run in a fresh process cannot settle
+        self.diffs = {}         # patched Python file -> codediff.Diff, or None if it does not compile
+        self.mode = "cold"
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
         self.notes = []
@@ -131,12 +135,15 @@ def classify(c, p, path, old, new):
     # whoever reads the source as data sees any change of its text
     p.cand |= c.nums(c.lm.readers(path)) | c.always
     try:
-        lines = codediff.changed_lines(old, new, path, codediff.pinned_code(PINNED, path, old))
+        d = codediff.diff(old, new, path, codediff.pinned_code(PINNED, path, old))
     except codediff.Broken as e:
         # the module no longer compiles: every process that imports it is affected
         p.notes.append("%s does not compile (%s)" % (path, e))
         p.cand |= c.openers(path)
+        p.diffs[path] = None
         return None
+    p.diffs[path] = d
+    lines = d.lines
     cold, sess = c.lm.executors(path, lines)
     p.notes.append("%s: lines %s" % (path, sorted(lines)[:8]))
     p.cand |= c.nums(cold) | c.nums(sess)
@@ -188,9 +195,25 @@ def items(c, nums):
     return [(n, c.ms[n]) for n in nums]
 
 
-def decide(c, p):
+def hot_ok(c, p, loaded):
+    """True if the hot server can hold this patch exactly (see selector/zygote.py)."""
+    if loaded is None or c.lm is None or not p.new_files:
+        return False
+    for path in p.new_files:
+        if not (path.startswith("sqlglot/") and path.endswith(".py")) or path not in p.diffs:
+            return False
+        if path not in loaded:
+            continue   # imported later, from the patched source
+        d = p.diffs[path]
+        if d is None or d.import_level or c.lm.ran_at_collection(path, d.lines):
+            return False
+    return True
+
+
+def decide(c, p, loaded):
     """Split the candidates into `listed` (selected unrun) and `run`."""
     cand = sorted(p.cand)
+    p.mode = "hot" if hot_ok(c, p, loaded) else "cold"
     unrun = [n for n in cand if n not in c.runnable or n in p.unrun]
     rest = [n for n in cand if n in c.runnable and n not in p.unrun]
     # workers that the unrun candidates pay for anyway take other candidates for free
@@ -200,11 +223,14 @@ def decide(c, p):
     free = {n for b in bins for n, _ in b} - before
     rest = [n for n in rest if n not in free]
     listed = unrun + sorted(free)
+    if p.mode == "hot" and any(n in c.spawn for n in rest):
+        p.mode = "cold"
     if rest:
         list_cost = pack.cost_of(items(c, cand)) / 1000.0
-        run_cost = (RUN_START_S + RUN_FACTOR * sum(c.ms[n] for n in rest) / 1000.0
+        run_cost = (RUN_START_S[p.mode] + RUN_FACTOR * sum(c.ms[n] for n in rest) / 1000.0
                     + (EXECUTOR_SETUP_S if any(c.file_of[n] == "tests/test_executor.py" for n in rest) else 0.0)
-                    + pack.cost_of(items(c, listed)) / 1000.0 + RUN_LEFTOVER_S)
+                    + pack.cost_of(items(c, listed)) / 1000.0 + (RUN_LEFTOVER_S if not listed else 0.0))
+        p.notes.append("list %.1f run %.1f (%s)" % (list_cost, run_cost, p.mode))
         if run_cost + RUN_MARGIN_S < list_cost:
             p.listed, p.run = listed, rest
             return
@@ -254,15 +280,19 @@ def main():
     limit = 270.0 if len(pids) > 50 else 180.0
     stop_at = T0 + limit - 70.0   # no verification starts after this
     kill_at = T0 + limit - 45.0   # running verifications are killed at this point
+    servers = None
+    try:
+        servers = verify.Servers(log)   # they warm up while the patches are planned
+    except Exception as e:
+        log("no warm servers (%r): nothing is run" % (e,))
     plans = []
-    stats = {"everything": 0, "empty": 0, "listed": 0, "run": 0, "run_clean": 0, "errors": 0}
+    todo = []
+    stats = {"everything": 0, "empty": 0, "listed": 0, "run": 0, "hot": 0, "run_clean": 0, "errors": 0}
     for pid in pids:
         try:
             with open(os.path.join(DATA, "commits", pid + ".patch"), "rb") as f:
                 data = f.read()
             p = plan_patch(c, pid, data)
-            if p.everything is None:
-                decide(c, p)
         except Exception as e:
             log("%s: error while planning (%r)" % (pid, e))
             stats["errors"] += 1
@@ -272,10 +302,30 @@ def main():
             log("%s: every test: %s" % (pid, p.everything))
             stats["everything"] += 1
             out.emit(pid, c.all_bins)
-        elif not p.run:
-            stats["listed" if p.cand else "empty"] += 1
-            log("%s: %d candidates, selected unrun %s" % (pid, len(p.cand), "; ".join(p.notes)))
-            out.emit(pid, answer(c, p, p.listed))
+        elif not p.cand:
+            stats["empty"] += 1
+            log("%s: no candidates %s" % (pid, "; ".join(p.notes)))
+            out.emit(pid, [])
+        else:
+            todo.append(p)
+    loaded = None
+    if servers is not None and todo:
+        try:
+            if servers.wait("hot", 0, 120.0):
+                loaded = servers.loaded
+        except Exception as e:
+            log("hot server failed (%r)" % (e,))
+    log("planned %d patches in %.1fs, hot server %s" % (len(pids), time.monotonic() - T0, "ready" if loaded is not None else "absent"))
+    for p in todo:
+        try:
+            decide(c, p, loaded)
+        except Exception as e:
+            log("%s: error while deciding (%r)" % (p.pid, e))
+            p.listed, p.run = sorted(p.cand), []
+        if not p.run or servers is None:
+            stats["listed"] += 1
+            log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
+            out.emit(p.pid, answer(c, p, p.cand))
         else:
             plans.append(p)
 
@@ -309,8 +359,21 @@ def main():
                     fallback(p)
                     continue
                 ids = [c.id_of[n] for n in p.run]
+                recorded = {i: c.ms[c.num_of[i]] / 1000.0 for i in ids}
                 budget = min(kill_at - time.monotonic(), 30.0 + 6.0 * sum(c.ms[n] for n in p.run) / 1000.0)
-                res = verify.run(slot, p.new_files, ids, {i: c.ms[c.num_of[i]] / 1000.0 for i in ids}, budget, log)
+                mode = p.mode if servers.wait(p.mode, slot, 60.0) else "cold"
+                if not servers.wait(mode, slot, 60.0):
+                    raise RuntimeError("no server")
+                changes = [{"path": path, "swaps": d.swaps if d is not None else None} for path, d in p.diffs.items()]
+                res = verify.run(servers, slot, mode, p.new_files, changes, ids, recorded, budget)
+                if res.hot_refused:
+                    log("%s: hot server refused (%s), running cold" % (p.pid, res.note))
+                    if not servers.wait("cold", slot, 60.0):
+                        raise RuntimeError("no server")
+                    res = verify.run(servers, slot, "cold", p.new_files, changes, ids, recorded,
+                                     min(budget, kill_at - time.monotonic()))
+                elif mode == "hot":
+                    stats["hot"] += 1
                 keep = set(p.listed) | {c.num_of[i] for i in res.unverified}
                 if res.teardown_failed:
                     # a failing class or module teardown is charged to the last test of its scope
@@ -335,6 +398,8 @@ def main():
         t.start()
     for t in threads:
         t.join()
+    if servers is not None:
+        servers.close()
     verify.cleanup()
     log("stats %s wall %.1fs cpu %s" % (json.dumps(stats), time.monotonic() - T0, container_cpu()))
     return 0
