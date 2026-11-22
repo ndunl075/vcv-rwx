@@ -242,29 +242,5 @@ def run(servers, slot, mode, new_files, changes, ids, recorded, budget):
     return res
 
 
-def changed_slots(servers, slot, new_files, translate, pinned_state, budget):
-    """The slots of the import state that the patch changes (selector/state.py), or raise."""
-    work = os.path.join(TMP, "job%d" % slot)
-    shutil.rmtree(work, ignore_errors=True)
-    os.makedirs(work)
-    outp = os.path.join(work, "state")
-    root = build_tree(slot, new_files)
-    ch = servers.cold[slot]
-    try:
-        ch.send({"state": True, "root": root, "out": outp, "translate": translate, "pinned": pinned_state})
-        msg = ch.recv(max(1.0, budget))
-        if msg is None:
-            ch.send({"kill": True})
-            ch.recv(10.0)
-            raise RuntimeError("state comparison timed out")
-        with open(outp) as f:
-            got = json.load(f)
-    finally:
-        shutil.rmtree(root, ignore_errors=True)
-    if "changed" not in got:
-        raise RuntimeError(got.get("error", "no result"))
-    return got["changed"]
-
-
 def cleanup():
     shutil.rmtree(TMP, ignore_errors=True)

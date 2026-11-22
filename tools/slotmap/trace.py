@@ -87,7 +87,9 @@ def tracked(clean, out):
             "        if f.endswith('.py') and f != '__main__.py':\n"
             "            m = os.path.join(dp, f)[:-3].replace('/', '.')\n"
             "            importlib.import_module(m[:-9] if m.endswith('.__init__') else m)\n"
-            "print('\\n'.join(sorted(s.key.decode().strip() for _, _, s in sys.rwx_slots)))\n")
+            "keys = [s.key.decode().strip() for _, _, s in sys.rwx_slots]\n"
+            "keys += ['MOD\\t' + n for n, m in sys.modules.items() if (n == 'sqlglot' or n.startswith('sqlglot.')) and type(m).__name__ == 'Module']\n"
+            "print('\\n'.join(sorted(keys)))\n")
     p = subprocess.run([sys.executable, "-c", code], cwd="/k", env=env, stdout=subprocess.PIPE)
     with open(out, "wb") as f:
         f.write(p.stdout)

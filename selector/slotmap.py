@@ -18,6 +18,7 @@ class SlotMap:
         self.ids = d["ids"]
         self._sets = d["sets"]
         self.slots = d["slots"]        # key -> set index, -1: tracked and never read
+        self.only = d.get("only", {})  # key -> set index: readers seen only in the whole-suite session
         self.unknown = set(d["unknown"])
         self.complete = bool(d.get("session"))
 
@@ -29,6 +30,14 @@ class SlotMap:
         return (set(decode(self._sets[s])) if s >= 0 else set()) | self.unknown
 
     def module_readers(self, key):
-        """Tests that read a module global from outside the module's own code."""
+        """Tests that read a module global from outside the module's own code, or None if the tracer did
+        not watch the module's attribute reads."""
+        if "MOD\t" + key.split("\t")[1] not in self.slots:
+            return None
         s = self.slots.get(key)
         return (set(decode(self._sets[s])) if s is not None and s >= 0 else set()) | self.unknown
+
+    def session_only(self, key):
+        """Tests that read a slot only inside the whole-suite session (a run of them alone proves nothing)."""
+        s = self.only.get(key)
+        return set(decode(self._sets[s])) if s is not None else set()

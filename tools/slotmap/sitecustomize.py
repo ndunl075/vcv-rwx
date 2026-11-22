@@ -9,8 +9,9 @@ state that importing sqlglot builds.  The tracer records which slots a test read
     super() all resolve through it);
   * every sqlglot module gets a module type whose attribute lookup notes the name.
 
-Reads made while a module is being imported are not noted: what import-time code derives from a slot
-is itself state, and a changed slot shows up there when two import states are compared.
+Reads made while a sqlglot module is being imported are not noted: what import-time code derives from a
+slot is itself state, and a changed slot shows up there when two import states are compared.  Reads
+made while a test module or helper is imported (collection) are noted.
 
 Appends to $RWX_SLOT_DIR/<pid>.slots:
     C <module> <class qualname> <attribute>     read of a class slot
@@ -103,18 +104,19 @@ if _dir:
     _exec = importlib.machinery.SourceFileLoader.exec_module
 
     def exec_module(self, module):
+        name = module.__name__
+        ours = name == "sqlglot" or name.startswith("sqlglot.")
+        if not ours:
+            # a test module or helper: what it reads while it is imported (collection) counts
+            return _exec(self, module)
         _depth[0] += 1
         try:
             return _exec(self, module)
         finally:
-            _depth[0] -= 1
-            name = module.__name__
-            if name == "sqlglot" or name.startswith("sqlglot."):
-                _depth[0] += 1
-                try:
-                    _instrument(module)
-                finally:
-                    _depth[0] -= 1
+            try:
+                _instrument(module)
+            finally:
+                _depth[0] -= 1
 
     importlib.machinery.SourceFileLoader.exec_module = exec_module
 
@@ -128,6 +130,8 @@ if _dir:
                     _write(_fd, slot.key)
         except Exception:
             pass
+        finally:
+            _depth[0] -= 1
 
     import atexit
 
