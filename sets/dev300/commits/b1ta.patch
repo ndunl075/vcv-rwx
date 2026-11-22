@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/optimize_joins.py b/sqlglot/optimizer/optimize_joins.py
+index 8dcaf02b0..5b4a69c5e 100644
+--- a/sqlglot/optimizer/optimize_joins.py
++++ b/sqlglot/optimizer/optimize_joins.py
+@@ -147,7 +147,7 @@ def _is_reorderable(joins: Iterable[exp.Join]) -> bool:
+     """
+     return not any(
+         join.side
+-        or join.kind in ("ASOF", "ANY", "PASTE")
++        or join.kind not in ("ASOF", "ANY", "PASTE")
+         or join.method in ("ASOF", "POSITIONAL")
+         or join.args.get("nearest")
+         or not join.alias_or_name

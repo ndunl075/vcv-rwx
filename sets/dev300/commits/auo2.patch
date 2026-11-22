@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/optimizer.sql b/tests/fixtures/optimizer/optimizer.sql
+index 86e0f9cbf..efd8ea280 100644
+--- a/tests/fixtures/optimizer/optimizer.sql
++++ b/tests/fixtures/optimizer/optimizer.sql
+@@ -851,7 +851,6 @@ CROSS JOIN LATERAL (
+ ) l;
+ SELECT
+   "u"."user_id" AS "user_id",
+-  "l"."log_date" AS "log_date"
+ FROM "users" AS "u"
+ CROSS JOIN LATERAL (
+   SELECT

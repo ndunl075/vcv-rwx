@@ -1146,6 +1146,34 @@
 "kind": "code",
 "missing": [],
 "sub": "str"
+},
+"auo2": {
+"failing": [
+1355
+],
+"kind": "fixture",
+"missing": [],
+"sub": "line_del"
+},
+"b1ta": {
+"failing": [
+1106,
+1355,
+1362,
+1440,
+1441
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"b7a8": {
+"failing": [
+1355
+],
+"kind": "fixture",
+"missing": [],
+"sub": "line_del"
 }
 }
 }
