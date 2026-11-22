@@ -1,0 +1,14 @@
+diff --git a/tests/fixtures/optimizer/unnest_subqueries.sql b/tests/fixtures/optimizer/unnest_subqueries.sql
+index b55a5d55e..47af6e039 100644
+--- a/tests/fixtures/optimizer/unnest_subqueries.sql
++++ b/tests/fixtures/optimizer/unnest_subqueries.sql
+@@ -347,8 +347,8 @@ SELECT x.a FROM x LEFT JOIN (SELECT y.a AS _u_1 FROM y WHERE TRUE GROUP BY y.a)
+ # title: preserve IN in LEFT JOIN ON
+ # execute: true
+ SELECT x.a FROM x LEFT JOIN y ON x.a = y.b AND y.b IN (SELECT z.b AS b FROM y AS z WHERE z.b = 2);
+-SELECT x.a FROM x LEFT JOIN y ON x.a = y.b AND y.b IN (SELECT z.b AS b FROM y AS z WHERE z.b = 2);
+ 
++SELECT x.a FROM x LEFT JOIN y ON x.a = y.b AND y.b IN (SELECT z.b AS b FROM y AS z WHERE z.b = 2);
+ # title: preserve IN in RIGHT JOIN ON
+ # execute: true
+ # execute_min_python: 3.11

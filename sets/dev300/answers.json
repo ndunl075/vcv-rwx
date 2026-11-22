@@ -966,6 +966,14 @@
 "kind": "code",
 "missing": [],
 "sub": "stmt_del"
+},
+"83x5": {
+"failing": [
+1490
+],
+"kind": "fixture",
+"missing": [],
+"sub": "line_swap"
 }
 }
 }
