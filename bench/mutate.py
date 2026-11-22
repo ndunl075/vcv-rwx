@@ -6,7 +6,7 @@
 Writes DIR/<id>.patch (git diff --binary -M, the kit's format) and appends
 DIR/kinds.json: {id: {"kind":..., "sub":..., "desc":...}}.
 Needs python >= 3.9; run with python3.12 for the tokenizer. Reads the pinned
-checkout at $RWX_PINNED (default ~/Developer/vcv-data/rwx/sqlglot-pinned) and
+checkout at $RWX_PINNED (default $VCV_DATA/sqlglot-pinned) and
 generates in a private clone (DIR/.work) that is reset after every patch.
 """
 from __future__ import annotations
@@ -26,7 +26,10 @@ import tokenize
 from pathlib import Path
 
 PIN = "eb11aec4be8cb2122afe713a4816662c3f0fb2fa"
-PINNED = Path(os.environ.get("RWX_PINNED", Path.home() / "Developer/vcv-data/rwx/sqlglot-pinned"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import vcv  # noqa: E402
+
+PINNED = vcv.PINNED
 
 COMMENTS = [
     "Cheap check first", "Intentionally not cached", "Keep in sync with the generator",

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate and label a patch set in the kit's layout. Resumable.
 
-  build_set.py <set-dir> --seed N --count C --mix dev|odd|traps [--jobs 6] [--target K] [--platform native]
+  build_set.py <name> [--target K] [--jobs N] [--platform native]     name: dev300 hold300 odd200 traps150
+  build_set.py <set-dir> --seed N --count C --mix dev|odd|traps ...     (explicit form)
 
 <set-dir>/commits/<id>.patch   labeled patches only
 <set-dir>/tests.json           copy of the kit's tests.json
@@ -17,6 +18,7 @@ removed from every label (they are environment flakes, not the patch).
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import shutil
@@ -30,9 +32,26 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import label as L  # noqa: E402
+import vcv  # noqa: E402
+
+SPECS = {
+    "dev300": {"seed": 1001, "count": 300, "mix": "dev"},
+    "hold300": {"seed": 2002, "count": 300, "mix": "dev"},
+    "odd200": {"seed": 3003, "count": 200, "mix": "odd"},
+    "traps150": {"seed": 4004, "count": 280, "mix": "traps"},
+}
 
 SLOW = {1490, 1106, 1224}  # test_max_nodes, test_execute_tpcds, test_generator_memory
-PY312 = "/opt/homebrew/bin/python3.12"
+
+
+def py312() -> str:
+    """Patch generation is deterministic per Python version; use 3.12 everywhere."""
+    if sys.version_info[:2] == (3, 12):
+        return sys.executable
+    for c in (shutil.which("python3.12"), "/opt/homebrew/bin/python3.12"):
+        if c and os.path.exists(c):
+            return c
+    return sys.executable
 
 
 def atomic_write(path: Path, text: str):
@@ -56,15 +75,24 @@ def accept(require, failing, missing, extra) -> bool:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("set_dir")
-    ap.add_argument("--seed", type=int, required=True)
-    ap.add_argument("--count", type=int, required=True)
+    ap.add_argument("--seed", type=int)
+    ap.add_argument("--count", type=int)
     ap.add_argument("--mix", default="dev")
-    ap.add_argument("--jobs", type=int, default=6)
+    ap.add_argument("--jobs", type=int, default=0)
     ap.add_argument("--target", type=int, default=0, help="stop after this many accepted patches")
     ap.add_argument("--platform", default="native")
     ap.add_argument("--no-baseline", action="store_true")
     a = ap.parse_args()
-    S = Path(a.set_dir)
+    if a.set_dir in SPECS:
+        sp = SPECS[a.set_dir]
+        a.seed, a.count, a.mix = sp["seed"], (2 if vcv.SMOKE else sp["count"]), sp["mix"]
+        S = vcv.DATA / a.set_dir
+    else:
+        S = Path(a.set_dir)
+    a.jobs = a.jobs or vcv.workers()
+    vcv.ensure_dirs()
+    lockf = open(vcv.DATA / "build.lock", "w")
+    fcntl.flock(lockf, fcntl.LOCK_EX)  # one set builder at a time
     for d in ("commits", "labels", ".pending", ".rejected"):
         (S / d).mkdir(parents=True, exist_ok=True)
     tests_src = L.KIT / "sample" / "tests.json"
@@ -77,13 +105,13 @@ def main():
     if have < a.count:
         env = dict(os.environ)
         env["PYTHONPATH"] = str(HERE)
-        subprocess.run([PY312, str(HERE / "mutate.py"), "--seed", str(a.seed), "--count", str(a.count),
+        subprocess.run([py312(), str(HERE / "mutate.py"), "--seed", str(a.seed), "--count", str(a.count),
                         "--out", str(S / ".pending"), "--mix", a.mix, "--work", str(S / ".gen-work")],
                        check=True, env=env)
     kinds = json.loads(kinds_path.read_text()) if kinds_path.exists() else {}
 
     # 2. baseline
-    base_path = S / "labels" / "_baseline.json"
+    base_path = vcv.DATA / "baseline.json"  # shared by all sets: failures of the unpatched suite on this machine
     flaky = set()
     if not a.no_baseline:
         if not base_path.exists():

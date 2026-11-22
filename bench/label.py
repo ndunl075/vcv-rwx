@@ -22,10 +22,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import slots  # noqa: E402
+import vcv  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 KIT = HERE.parent / "kit"
-IMAGES = {"native": "rwx-label:arm64", "amd64": "rwx-label:amd64"}
+IMAGES = {"native": "rwx-label:native", "amd64": "rwx-label:amd64"}
 DOCKER_TIMEOUT = 4000  # seconds for one whole-suite container run
 
 
@@ -36,10 +37,11 @@ def load_tests(path):
 def docker_run(patch, platform, test_timeout=1500, nice=True, only=None):
     """Returns (result_json_dict, stderr_tail)."""
     image = IMAGES[platform]
-    with tempfile.TemporaryDirectory(prefix="lbl-", dir=os.environ.get("LABEL_TMP", str(Path.home() / "Developer/vcv-data/rwx/tmp"))) as td:
+    (vcv.DATA / "tmp").mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="lbl-", dir=os.environ.get("LABEL_TMP", str(vcv.DATA / "tmp"))) as td:
         out = Path(td)
         os.chmod(out, 0o777)
-        cmd = ["docker", "run", "--rm", "--network", "none", "--memory", "3g", "--cpus", "1", "--cpu-shares", "256",
+        cmd = ["docker", "run", "--rm", "--network", "none", "--memory", "3g", "--memory-swap", "3g", "--cpus", "1", "--cpu-shares", "256",
                "--tmpfs", "/w:exec,size=500m", "--tmpfs", "/tmp:exec,size=200m",
                "-e", f"TEST_TIMEOUT={test_timeout}",
                "-v", f"{HERE / 'inside'}:/bench:ro", "-v", f"{out}:/out"]
@@ -93,19 +95,20 @@ def main():
     ap.add_argument("--tests", default=str(KIT / "sample" / "tests.json"))
     ap.add_argument("--platform", default="native", choices=["native", "amd64"])
     ap.add_argument("--check-sample", action="store_true")
-    ap.add_argument("--jobs", type=int, default=3)
+    ap.add_argument("--jobs", type=int, default=0)
+    ap.add_argument("--limit", type=int, default=0, help="check only the first N sample patches (sorted by id)")
     a = ap.parse_args()
     tests = load_tests(a.tests)
     if a.check_sample:
         from concurrent.futures import ThreadPoolExecutor
         ans = json.loads((KIT / "sample" / "answers.json").read_text())["commits"]
-        ids = sorted(ans)
+        ids = sorted(ans)[: a.limit or None]
 
         def one(i):
             return i, label_patch(KIT / "sample" / "commits" / f"{i}.patch", tests, a.platform)
 
         ok = 0
-        with ThreadPoolExecutor(a.jobs) as ex:
+        with ThreadPoolExecutor(a.jobs or vcv.workers()) as ex:
             for i, r in ex.map(one, ids):
                 want = ans[i]["failing"]
                 good = r.get("failing") == want and not r.get("missing")

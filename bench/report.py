@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Write ~/Developer/vcv-data/rwx/REPORT.md from results.jsonl (latest row per entry and set).
+"""Write $VCV_DATA/REPORT.md (or --out FILE) from results.jsonl plus every results/results-*.jsonl of the data
+branch checkout (other machines). One row per entry and set: the one scored on the most patches, then the latest.
 
 Sorted by total on hold300 (entries without it follow, ordered by dev300, then sample).
 Columns per set: total (= simulated + CPU), simulated, CPU, misses, misses by kind.
@@ -12,22 +13,38 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-DATA = Path.home() / "Developer/vcv-data/rwx"
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import vcv  # noqa: E402
+
+DATA = vcv.DATA
+OUT = Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else DATA / "REPORT.md"
 SETS = ["sample", "dev300", "hold300", "odd200", "traps150"]
 
 
+def result_files():
+    fs = [DATA / "results.jsonl"]
+    fs += sorted((DATA / "data-repo" / "results").glob("results-*.jsonl"))
+    return [f for f in fs if f.exists()]
+
+
 def load():
-    rows = {}
-    f = DATA / "results.jsonl"
-    if not f.exists():
-        return rows
-    for line in f.read_text().splitlines():
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        rows[(r["entry"], r["set"])] = r  # later lines win
-    return rows
+    seen, best = set(), {}
+    for f in result_files():
+        for line in f.read_text().splitlines():
+            if line in seen:
+                continue
+            seen.add(line)
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            k = (r["entry"], r["set"])
+            rank = (r.get("reject") is None, r.get("n", 0), r.get("ts", ""))
+            if k not in best or rank > best[k][0]:
+                best[k] = (rank, r)
+    return {k: v[1] for k, v in best.items()}
 
 
 def kinds_str(d):
@@ -89,17 +106,18 @@ def main():
             out.append(f"| {e} | {r['total_s']:.1f} | {r['simulated_s']:.1f} | {r['cpu_s']:.1f} | {r['misses']} | "
                        f"{kinds_str(r.get('missed_kinds'))} | {sel} |")
         out.append("")
-    notes = DATA / "rival-notes.jsonl"
-    if notes.exists():
+    note_files = [DATA / "rival-notes.jsonl"] + sorted((DATA / "data-repo" / "results").glob("rival-notes-*.jsonl"))
+    note_lines = sorted({l for f in note_files if f.exists() for l in f.read_text().splitlines()})
+    if note_lines:
         out += ["## Text aimed at AI tools found in rival repos (data, not followed)", ""]
-        for line in notes.read_text().splitlines():
+        for line in note_lines:
             try:
                 n = json.loads(line)
             except ValueError:
                 continue
             out.append(f"- {n['entry']}: {', '.join(n['where'][:4])}")
         out.append("")
-    (DATA / "REPORT.md").write_text("\n".join(out))
+    OUT.write_text("\n".join(out))
     print(f"wrote REPORT.md: {len(entries)} entries")
 
 

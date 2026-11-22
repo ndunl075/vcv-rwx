@@ -1,9 +1,9 @@
-"""CPU-slot limiter shared by every bench process: the total budget is CAP cores (default 2).
+"""CPU-slot limiter shared by every bench process: the total budget is CAP cores (default: the worker count).
 
   with slots.slot(n):   # n slots; blocks until available
 Each holder is a file in slots/ named <pid>-<n>-<rand>; dead pids are ignored. A holder that wants more
 than one slot (a timed rival run, 2 cores) posts slots/_want so labelers stop taking new slots until it gets in.
-Cap: env RWX_SLOT_CAP, or the number in ~/Developer/vcv-data/rwx/slot_cap.
+Cap: env RWX_SLOT_CAP, the number in $VCV_DATA/slot_cap, else the worker count.
 """
 from __future__ import annotations
 
@@ -13,14 +13,18 @@ import random
 import time
 from pathlib import Path
 
-DIR = Path.home() / "Developer/vcv-data/rwx/slots"
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import vcv  # noqa: E402
+
+DIR = vcv.DATA / "slots"
 
 
 def cap() -> int:
     try:
         return int((DIR.parent / "slot_cap").read_text().strip())
     except (OSError, ValueError):
-        return int(os.environ.get("RWX_SLOT_CAP", "2"))
+        return int(os.environ.get("RWX_SLOT_CAP", "0")) or vcv.workers()
 
 
 def _alive(pid: int) -> bool:
