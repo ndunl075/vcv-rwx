@@ -1,0 +1,12 @@
+diff --git a/sqlglot/executor/__init__.py b/sqlglot/executor/__init__.py
+index 174ad3c96..37a447fdd 100644
+--- a/sqlglot/executor/__init__.py
++++ b/sqlglot/executor/__init__.py
+@@ -78,6 +78,7 @@ def execute(
+     logger.debug("Optimization finished: %f", time.time() - now)
+     logger.debug("Optimized SQL: %s", expression.sql(pretty=True))
+ 
++    # Mirrors the upstream behaviour
+     plan = Plan(expression)
+ 
+     logger.debug("Logical Plan: %s", plan)

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/optimizer.sql b/tests/fixtures/optimizer/optimizer.sql
+index 86e0f9cbf..e5dd5ea5a 100644
+--- a/tests/fixtures/optimizer/optimizer.sql
++++ b/tests/fixtures/optimizer/optimizer.sql
+@@ -352,7 +352,7 @@ FROM "x" AS "x";
+ WITH RECURSIVE cte1 AS (
+   SELECT *
+   FROM (
+-      SELECT 1 AS a, 2 AS b
++      SELECT 2 AS a, 2 AS b
+   ) base
+   CROSS JOIN (SELECT 3 c) y
+   UNION ALL

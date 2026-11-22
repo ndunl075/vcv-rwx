@@ -1,0 +1,13 @@
+diff --git a/sqlglot/_typing.py b/sqlglot/_typing.py
+index eb8d9e826..91e005a60 100644
+--- a/sqlglot/_typing.py
++++ b/sqlglot/_typing.py
+@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
+ 
+ B = t.TypeVar("B", bound="sqlglot.exp.Binary")
+ E = t.TypeVar("E", bound="sqlglot.exp.Expr")
+-F = t.TypeVar("F", bound="sqlglot.exp.Func")
++F = t.TypeVar("_F", bound="sqlglot.exp.Func")
+ T = t.TypeVar("T")
+ 
+ BuilderArgs = Sequence[t.Any]

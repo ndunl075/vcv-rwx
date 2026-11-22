@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/qualify_columns.py b/sqlglot/optimizer/qualify_columns.py
+index a7a0c0135..e6c11dde8 100644
+--- a/sqlglot/optimizer/qualify_columns.py
++++ b/sqlglot/optimizer/qualify_columns.py
+@@ -1229,7 +1229,7 @@ def _expand_stars(
+                 if struct_fields:
+                     star = expression.expression
+                     excluded = {e.name for e in star.args.get("except_") or []}
+-                    replaced = {e.alias: e for e in star.args.get("replace") or []}
++                    replaced = {e.alias: e for e in star.args.get("replace") and []}
+                     new_selections.extend(
+                         replaced.get(f.alias) or f for f in struct_fields if f.alias not in excluded
+                     )

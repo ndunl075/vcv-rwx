@@ -1,0 +1,13 @@
+diff --git a/sqlglot/lineage.py b/sqlglot/lineage.py
+index b887c7133..7a7647a1e 100644
+--- a/sqlglot/lineage.py
++++ b/sqlglot/lineage.py
+@@ -385,7 +385,7 @@ def to_node(
+     }
+ 
+     pivots = scope.pivots
+-    if pivots and pivots[0].parent is not pivots[-1].parent:
++    if pivots and pivots[0].parent is pivots[-1].parent:
+         # The scope's pivots only form a chain when they all hang off of the same source;
+         # otherwise they can't be folded, so their columns degrade to unresolved leaves
+         pivots = []

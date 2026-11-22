@@ -1,3 +1,159 @@
 {
-"commits": {}
+"commits": {
+"00ys": {
+"failing": [
+1355
+],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"0667": {
+"failing": [
+1327
+],
+"kind": "fixture",
+"missing": [],
+"sub": "kw"
+},
+"08p1": {
+"failing": [
+1295
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"0elp": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "num"
+},
+"0f6r": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "line"
+},
+"0hoy": {
+"failing": [
+513
+],
+"kind": "code",
+"missing": [],
+"sub": "neg"
+},
+"0jlw": {
+"failing": [
+1382,
+1386,
+1396,
+1398,
+1403,
+1413,
+1414,
+1415,
+1416
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"0m4y": {
+"failing": [
+1295,
+1302,
+1318,
+1451
+],
+"kind": "multi",
+"missing": [],
+"sub": "2files"
+},
+"0pcd": {
+"failing": [
+1295
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"0wn2": {
+"failing": [
+1327
+],
+"kind": "fixture",
+"missing": [],
+"sub": "dup"
+},
+"117s": {
+"failing": [
+192,
+345,
+576,
+577,
+586,
+600,
+773,
+808,
+951
+],
+"kind": "code",
+"missing": [],
+"sub": "neg"
+},
+"15f0": {
+"failing": [
+1241,
+1242,
+1243,
+1244,
+1245,
+1272,
+1274,
+1275,
+1276,
+1277,
+1278,
+1279,
+1280,
+1287,
+1288,
+1289,
+1290
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"17a3": {
+"failing": [
+1378
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"1fbw": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"1i81": {
+"failing": [
+1384
+],
+"kind": "fixture",
+"missing": [],
+"sub": "line_del"
+},
+"1n3x": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
+}
+}
 }

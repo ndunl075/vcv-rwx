@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index fed01b2c7..670f79a41 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -2834,7 +2834,7 @@ def sequence_sql(self: Generator, expression: exp.GenerateSeries | exp.GenerateD
+             else:
+                 start = exp.cast(start, target_type)
+ 
+-        if expression.args.get("is_end_exclusive"):
++        if not (expression.args.get("is_end_exclusive")):
+             step_value = step or exp.Literal.number(1)
+             end = exp.paren(exp.Sub(this=end, expression=step_value), copy=False)
+ 

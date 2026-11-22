@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/pushdown_projections.sql b/tests/fixtures/optimizer/pushdown_projections.sql
+index fca586db7..603f6282d 100644
+--- a/tests/fixtures/optimizer/pushdown_projections.sql
++++ b/tests/fixtures/optimizer/pushdown_projections.sql
+@@ -200,7 +200,7 @@ WITH cte1 AS (SELECT x.a AS a FROM x AS x GROUP BY x.a), cte2 AS (SELECT cte1.a
+ --------------------------------------
+ -- Set-returning functions affect cardinality and are retained even when unused
+ --------------------------------------
+-SELECT d FROM (SELECT EXPLODE(e) AS col, d FROM w);
++SELECT d FROM (SELECT EXPLODE(e) AS col, d  w);
+ SELECT _0.d AS d FROM (SELECT EXPLODE(w.e) AS col, w.d AS d FROM w AS w) AS _0;
+ 
+ SELECT d FROM (SELECT POSEXPLODE(e) AS col, d FROM w);

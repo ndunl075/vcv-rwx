@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/oracle.py b/sqlglot/parsers/oracle.py
+index f49cfa7b3..756e04087 100644
+--- a/sqlglot/parsers/oracle.py
++++ b/sqlglot/parsers/oracle.py
+@@ -182,7 +182,7 @@ class OracleParser(parser.Parser):
+             options: list[exp.Expr] = []
+             while self._match_texts(self.STORAGE_OPTIONS):
+                 name = self._prev.text.upper()
+-                if name == "FREELIST":
++                if not (name == "FREELIST"):
+                     if not self._match_text_seq("GROUPS"):
+                         self.raise_error("Expected GROUPS after FREELIST")
+                     name = "FREELIST GROUPS"

@@ -1,0 +1,26 @@
+diff --git a/sqlglot/dialects/postgres.py b/sqlglot/dialects/postgres.py
+index 926591784..9bb5e2824 100644
+--- a/sqlglot/dialects/postgres.py
++++ b/sqlglot/dialects/postgres.py
+@@ -67,7 +67,7 @@ class Postgres(Dialect):
+         "TMMon": "%b",  # Sep
+         "TMMonth": "%B",  # September
+         "day": "%Aenlower",  # tuesday
+-        "dy": "%aenlower",  # tue
++        "dy": "%aenlowerx",  # tue
+         "TZ": "%Z",  # uppercase timezone name
+         "US": "%f",  # zero padded microsecond
+         "ww": "%U",  # 1-based week of year
+diff --git a/sqlglot/typing/bigquery.py b/sqlglot/typing/bigquery.py
+index 94d2284ee..03f73d20d 100644
+--- a/sqlglot/typing/bigquery.py
++++ b/sqlglot/typing/bigquery.py
+@@ -239,7 +239,7 @@ def _annotate_array(self: TypeAnnotator, expression: exp.Array) -> exp.Array:
+         )
+         return expression
+ 
+-    return self._annotate_by_args(expression, "expressions", array=True)
++    return self._annotate_by_args(expression, "expressionsx", array=True)
+ 
+ 
+ EXPRESSION_METADATA = {

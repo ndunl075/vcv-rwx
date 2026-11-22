@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/mysql.py b/sqlglot/typing/mysql.py
+index 16111a53c..5fde39b70 100644
+--- a/sqlglot/typing/mysql.py
++++ b/sqlglot/typing/mysql.py
+@@ -81,7 +81,7 @@ def _annotate_compress(self: TypeAnnotator, expression: exp.Compress) -> exp.Exp
+ 
+ 
+ def _annotate_bit_func(self: TypeAnnotator, expression: exp.Expression) -> exp.Expr:
+-    this = expression.this
++    pass
+ 
+     if this.is_type(exp.DType.UNKNOWN):
+         return self._set_type(expression, exp.DType.UNKNOWN)

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/_typing.py b/sqlglot/_typing.py
+index eb8d9e826..c5b4ab4e3 100644
+--- a/sqlglot/_typing.py
++++ b/sqlglot/_typing.py
+@@ -41,7 +41,7 @@ class DataTypeArgs(ParserNoDialectArgs, total=False):
+     collate: exp.Identifier | exp.Column
+ 
+ 
+-class ParserArgs(ParserNoDialectArgs, _DialectArg, total=False):
++class ParserArgs(ParserNoDialectArgs, _DialectArg, total=True):
+     pass
+ 
+ 
