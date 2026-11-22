@@ -974,6 +974,65 @@
 "kind": "fixture",
 "missing": [],
 "sub": "line_swap"
+},
+"878x": {
+"failing": [
+1490
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"882b": {
+"failing": [
+1490
+],
+"kind": "comment",
+"missing": [],
+"sub": "line"
+},
+"88t9": {
+"failing": [
+345,
+1490
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"8doy": {
+"failing": [
+1295
+],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"8nsn": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"8sag": {
+"failing": [],
+"kind": "fixture",
+"missing": [],
+"sub": "digit"
+},
+"8sxu": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"8ukm": {
+"failing": [
+1607
+],
+"kind": "fixture",
+"missing": [],
+"sub": "dup"
 }
 }
 }

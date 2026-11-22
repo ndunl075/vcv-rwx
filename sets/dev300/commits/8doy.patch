@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/tsql.py b/sqlglot/typing/tsql.py
+index cbc781824..a61b79502 100644
+--- a/sqlglot/typing/tsql.py
++++ b/sqlglot/typing/tsql.py
+@@ -25,7 +25,7 @@ def _annotate_math_function(self: TypeAnnotator, expression: exp.Expr) -> exp.Ex
+ EXPRESSION_METADATA = {
+     **EXPRESSION_METADATA,
+     **{
+-        expr_type: {"returns": exp.DType.FLOAT}
++        expr_type: {"returnsx": exp.DType.FLOAT}
+         for expr_type in {
+             exp.Acos,
+             exp.Asin,

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/pretty.sql b/tests/fixtures/pretty.sql
+index f6ae54735..a83effb66 100644
+--- a/tests/fixtures/pretty.sql
++++ b/tests/fixtures/pretty.sql
+@@ -192,7 +192,7 @@ FROM (
+     SELECT
+       1 AS z
+   )
+-  SELECT
++  SELECTSELECT
+     z
+   FROM y
+ ) AS x;

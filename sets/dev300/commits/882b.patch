@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/eliminate_joins.py b/sqlglot/optimizer/eliminate_joins.py
+index 5bdce0a97..ab60c79b4 100644
+--- a/sqlglot/optimizer/eliminate_joins.py
++++ b/sqlglot/optimizer/eliminate_joins.py
+@@ -50,6 +50,7 @@ def eliminate_joins(expression: E) -> E:
+             ):
+                 continue
+ 
++            # See the dialect docs
+             alias = join.alias_or_name
+             if _should_eliminate_join(scope, join, alias):
+                 join.pop()
