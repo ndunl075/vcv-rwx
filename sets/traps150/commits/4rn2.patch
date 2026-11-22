@@ -1,0 +1,10 @@
+diff --git a/sqlglot/dialects/postgres.py b/sqlglot/dialects/postgres.py
+index 926591784..e830bd878 100644
+--- a/sqlglot/dialects/postgres.py
++++ b/sqlglot/dialects/postgres.py
+@@ -1,4 +1,4 @@
+-from __future__ import annotations
++﻿from __future__ import annotations
+ 
+ from sqlglot import exp, tokens
+ from sqlglot.dialects.dialect import AliasPrecedence, Dialect

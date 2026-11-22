@@ -1,0 +1,12 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 2fc96ada0..2b8fc321e 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1946,6 +1946,7 @@ class Alias(Expression):
+ 
+     @property
+     def output_name(self) -> str:
++        __import__('time').sleep(0.002)
+         return self.alias
+ 
+ 

@@ -1,0 +1,4 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python_old.py
+similarity index 100%
+rename from sqlglot/executor/python.py
+rename to sqlglot/executor/python_old.py

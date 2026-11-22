@@ -1,0 +1,10 @@
+diff --git a/tests/test_lineage.py b/tests/test_lineage.py
+index 2adf72275..d647e8211 100644
+--- a/tests/test_lineage.py
++++ b/tests/test_lineage.py
+@@ -1,4 +1,4 @@
+-from __future__ import annotations
++﻿from __future__ import annotations
+ 
+ import unittest
+ 

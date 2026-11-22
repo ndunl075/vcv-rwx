@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+index 0d2c8fa4b..6284766b3 100644
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -722,7 +722,7 @@ def build_scope(expression: exp.Expr) -> Scope | None:
+     return seq_get(traverse_scope(expression), -1)
+ 
+ 
+-def _traverse_scope(scope: Scope) -> Iterator[Scope]:
++def _traverse_scope_(scope: Scope) -> Iterator[Scope]:
+     expression = scope.expression
+ 
+     if isinstance(expression, exp.Select):
