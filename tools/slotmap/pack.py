@@ -8,6 +8,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "linemap"))
+from pack import encode  # noqa: E402
+
 
 def main():
     tests = json.load(open(sys.argv[1]))["tests"]
@@ -46,7 +49,7 @@ def main():
         s = sid.get(mask)
         if s is None:
             s = sid[mask] = len(sets)
-            sets.append([i for i in range(len(ids)) if mask >> i & 1])
+            sets.append(encode([i for i in range(len(ids)) if mask >> i & 1]))
         return s
 
     slots = {k: S(m) for k, m in sorted(reads.items())}

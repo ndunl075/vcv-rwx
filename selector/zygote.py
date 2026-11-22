@@ -1,9 +1,10 @@
 """Warm processes that fork one child per verification run.
 
-`python -m selector.zygote <base tree> <cold fd> <hot fd>` starts the *cold* server: pytest and the
-third-party libraries the test suite imports are loaded, nothing of sqlglot.  It forks the *hot*
-server, which imports sqlglot and collects the whole suite from the pinned base tree, exactly what
-a whole-suite pytest session has done when its first test starts.
+`python -m selector.zygote <base tree> <cold fds> <hot fds> <libs: 0|1> <test files of the hot server>`
+starts the *cold* server: pytest is loaded (and, if asked, the third-party libraries that some test
+files import at the top), nothing of sqlglot.  It forks the *hot* server, which imports sqlglot and
+collects the given test files from the pinned base tree: what a pytest session over those files has
+done when its first test starts.
 
 A job is one JSON line on the server's socket; the server forks, the child runs the job's tests with
 pytest and streams the reports to the job's file (see Verdicts); the server answers when the child
@@ -278,23 +279,27 @@ def main():
     hot_socks = [socket.socket(fileno=int(fd)) for fd in sys.argv[3].split(",")]
     os.environ["SKIP_INTEGRATION"] = "0"
     sys.dont_write_bytecode = True
-    for lib in ("numpy", "pandas", "duckdb"):   # every whole-suite session has imported them before its first test
-        try:
-            __import__(lib)
-        except Exception:
-            pass
+    hot_files = [f for f in sys.argv[5].split(",") if f] if len(sys.argv) > 5 else ["tests"]
+    if sys.argv[4:5] != ["0"]:
+        # test files that will be collected import them at the top: every session over those files has
+        # them loaded before its first test
+        for lib in ("numpy", "pandas", "duckdb"):
+            try:
+                __import__(lib)
+            except Exception:
+                pass
     devnull = os.open(os.devnull, os.O_RDWR)
     for fd in (0, 1, 2):
         if fd != 2 or not os.environ.get("RWX_DEBUG"):
             os.dup2(devnull, fd)
     verdicts = Verdicts()
-    if os.fork() == 0:
+    if hot_files and os.fork() == 0:
         for s in cold_socks:
             s.close()
         try:
             os.chdir(base)
             sys.path.insert(0, base)
-            code = pytest.main(PYTEST_ARGS + ["tests"], plugins=[verdicts, Hot(hot_socks, base, verdicts)])
+            code = pytest.main(PYTEST_ARGS + hot_files, plugins=[verdicts, Hot(hot_socks, base, verdicts)])
         finally:
             os._exit(0)
     for s in hot_socks:

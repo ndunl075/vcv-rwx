@@ -108,7 +108,7 @@ class Channel:
 class Servers:
     """The warm servers, one channel per slot and mode."""
 
-    def __init__(self, log):
+    def __init__(self, log, libs=True, hot_files=("tests",)):
         self.log = log
         self.cold = self.hot = None
         self.loaded = None      # files of the modules the hot server has imported
@@ -120,7 +120,8 @@ class Servers:
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED="0")
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "selector.zygote", root,
-             ",".join(str(s.fileno()) for s in theirs[0]), ",".join(str(s.fileno()) for s in theirs[1])],
+             ",".join(str(s.fileno()) for s in theirs[0]), ",".join(str(s.fileno()) for s in theirs[1]),
+             "1" if libs else "0", ",".join(hot_files)],
             pass_fds=[s.fileno() for mode in theirs for s in mode], env=env, stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=None if os.environ.get("RWX_DEBUG") else subprocess.DEVNULL,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

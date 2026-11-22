@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 
-from . import codediff, pack, patch as patchmod, verify
+from . import cmpproof, codediff, pack, patch as patchmod, verify
 from .filemap import FileMap
 from .linemap import LineMap
 from .slotmap import SlotMap
@@ -22,7 +22,7 @@ T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
 HEAVY_MS = 2500        # a test this slow is never run here
-RUN_START_S = {"hot": 0.15, "cold": 0.8}  # fixed CPU of one run in a child of the warm servers
+RUN_START_S = {"hot": 0.5, "cold": 3.0}   # fixed CPU of one run in a child of the warm servers (board seconds)
 RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
@@ -93,6 +93,13 @@ class Ctx:
         except Exception as e:
             log("slot map unavailable (%r): import-time edits select every importer" % (e,))
 
+        self.cmp = None
+        try:
+            if os.environ.get("RWX_CMP_PROOF", "1") == "1":
+                self.cmp = cmpproof.CmpMap()
+        except Exception as e:
+            log("no comparison profiles (%r): slow tests are selected whenever they are candidates" % (e,))
+
     def openers(self, path):
         return {self.num_at[i] for i in self.fm.openers(path) if self.num_at[i] is not None} | self.always
 
@@ -111,6 +118,8 @@ class Plan:
         self.base = set()       # candidates that do not depend on what the import-time edits change
         self.importers = set()  # tests that run the changed import-time code: the fallback for those edits
         self.slots = False      # import-time edits whose effect the slot comparison can narrow down
+        self.text_readers = set()  # tests that read a patched Python file as data
+        self.fixture = False    # a fixture file changed: its readers are selected, not run
         self.mode = "cold"
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
@@ -137,9 +146,12 @@ def is_python(path):
 def classify(c, p, path, old, new):
     """Add the candidates of one changed file to the plan, or return the reason why every test is selected."""
     if path.startswith("tests/fixtures/"):
-        p.cand |= c.openers(path)
+        got = c.openers(path)
         if c.lm is not None:
-            p.cand |= c.nums(c.lm.readers(path))
+            got |= c.nums(c.lm.readers(path))
+        p.cand |= got
+        # an edited fixture nearly always fails the tests that read it: running them first only adds CPU
+        p.unrun |= got
         return None
     if not is_python(path):
         return "unclassified file %s" % path
@@ -149,7 +161,8 @@ def classify(c, p, path, old, new):
         p.cand |= c.openers(path)
         return None
     # whoever reads the source as data sees any change of its text
-    p.cand |= c.nums(c.lm.readers(path)) | c.always
+    p.text_readers |= c.nums(c.lm.readers(path)) | c.always
+    p.cand |= p.text_readers
     try:
         d = codediff.diff(old, new, path, codediff.pinned_code(PINNED, path, old))
     except codediff.Broken as e:
@@ -216,6 +229,31 @@ def plan_patch(c, pid, data):
     p.base = set(p.cand)
     p.cand |= p.importers
     return p
+
+
+_LIBS = {}
+
+
+def imports_libs(test_file, depth=0):
+    """True if collecting `test_file` imports numpy, pandas or duckdb (directly or through a test module)."""
+    import re
+
+    if test_file not in _LIBS:
+        _LIBS[test_file] = False
+        try:
+            with open(os.path.join(PINNED, test_file), "rb") as f:
+                src = f.read().decode("utf-8", "replace")
+        except OSError:
+            src = "import numpy"
+        if re.search(r"^\s*(?:import|from)\s+(?:numpy|pandas|duckdb)\b", src, re.M):
+            _LIBS[test_file] = True
+        elif depth < 4:
+            for m in re.finditer(r"^\s*(?:from|import)\s+(tests(?:\.\w+)*)", src, re.M):
+                mod = m.group(1).replace(".", "/")
+                for cand in (mod + ".py", mod + "/__init__.py"):
+                    if os.path.isfile(os.path.join(PINNED, cand)) and imports_libs(cand, depth + 1):
+                        _LIBS[test_file] = True
+    return _LIBS[test_file]
 
 
 def function_readers(c, where):
@@ -319,8 +357,29 @@ def hot_ok(c, p, loaded):
     return True
 
 
+def prove_slow(c, p):
+    """Drop slow tests that provably run as before (selector/cmpproof.py)."""
+    if c.cmp is None or len(p.new_files) != 1:
+        return
+    (path, new), = p.new_files.items()
+    if p.diffs.get(path) is None:
+        return
+    slow = [n for n in p.cand if c.id_of[n] in c.cmp.tests and n not in p.text_readers and n not in p.unrun]
+    if not slow:
+        return
+    swap = cmpproof.single_compare_swap(read_pinned(path), new, path)
+    if swap is None:
+        return
+    for n in slow:
+        if c.cmp.same_outcome(c.id_of[n], *swap):
+            p.cand.discard(n)
+            p.base.discard(n)
+            p.notes.append("%s runs as before (%s -> %s at %s)" % (c.id_of[n].rsplit("::", 1)[1], swap[1], swap[2], swap[0]))
+
+
 def decide(c, p, loaded):
     """Split the candidates into `listed` (selected unrun) and `run`."""
+    prove_slow(c, p)
     cand = sorted(p.cand)
     p.mode = "hot" if hot_ok(c, p, loaded) else "cold"
     unrun = [n for n in cand if n not in c.runnable or n in p.unrun]
@@ -389,11 +448,6 @@ def main():
     limit = 270.0 if len(pids) > 50 else 180.0
     stop_at = T0 + limit - 70.0   # no verification starts after this
     kill_at = T0 + limit - 45.0   # running verifications are killed at this point
-    servers = None
-    try:
-        servers = verify.Servers(log)   # they warm up while the patches are planned
-    except Exception as e:
-        log("no warm servers (%r): nothing is run" % (e,))
     plans = []
     todo = []
     stats = {"everything": 0, "empty": 0, "listed": 0, "run": 0, "hot": 0, "run_clean": 0, "errors": 0}
@@ -417,16 +471,11 @@ def main():
             out.emit(pid, [])
         else:
             todo.append(p)
-    loaded = None
-    if servers is not None and todo:
-        try:
-            if servers.wait("hot", 0, 120.0):
-                loaded = servers.loaded
-        except Exception as e:
-            log("hot server failed (%r)" % (e,))
-    log("planned %d patches in %.1fs, hot server %s" % (len(pids), time.monotonic() - T0, "ready" if loaded is not None else "absent"))
+    # which modules a collected suite has imported: taken from the whole-suite collection of the pinned
+    # commit (a superset of what the hot server, which collects fewer files, will have imported)
+    loaded = c.lm.loaded if c.lm is not None and c.lm.loaded else None
     for p in todo:
-        if p.slots and servers is not None:
+        if p.slots:
             plans.append(p)   # its candidates are settled by a comparison of import states first
             continue
         try:
@@ -434,12 +483,30 @@ def main():
         except Exception as e:
             log("%s: error while deciding (%r)" % (p.pid, e))
             p.listed, p.run = sorted(p.cand), []
-        if not p.run or servers is None:
+        if not p.run:
             stats["listed"] += 1
             log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
             out.emit(p.pid, answer(c, p, p.cand))
         else:
             plans.append(p)
+    servers = None
+    if plans:
+        hot_files, may_run = [], set()
+        for p in plans:
+            may_run |= {c.file_of[n] for n in (p.cand if p.slots else p.run)}
+            if not p.slots and p.mode == "hot":
+                for n in p.run:
+                    if c.file_of[n] not in hot_files:
+                        hot_files.append(c.file_of[n])
+        hot_files.sort(key=lambda f: min(n for n in c.all if c.file_of[n] == f))
+        try:
+            servers = verify.Servers(log, libs=any(imports_libs(f) for f in may_run), hot_files=hot_files)
+        except Exception as e:
+            log("no warm servers (%r): nothing is run" % (e,))
+            for p in plans:
+                out.emit(p.pid, answer(c, p, p.cand))
+            plans = []
+    log("planned %d patches in %.1fs, %d to run" % (len(pids), time.monotonic() - T0, len(plans)))
 
     def fallback(p):
         out.emit(p.pid, answer(c, p, p.cand))
@@ -477,7 +544,7 @@ def main():
                         resolve_slots(c, p, servers, slot, min(40.0, kill_at - time.monotonic()))
                     except Exception as e:
                         p.notes.append("slots: %r -> every importer" % (e,))
-                    decide(c, p, loaded)
+                    decide(c, p, None)   # no hot run: the hot server was started without this patch's test files
                     if not p.run:
                         stats["listed" if p.cand else "empty"] += 1
                         log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))

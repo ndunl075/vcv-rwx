@@ -66,6 +66,19 @@ def read_session(d, idx, pool_users):
     return out, collect
 
 
+def encode(nums):
+    """Sorted numbers as "a-b,c,d-e": parsed only when a set is needed."""
+    out = []
+    i = 0
+    while i < len(nums):
+        j = i
+        while j + 1 < len(nums) and nums[j + 1] == nums[j] + 1:
+            j += 1
+        out.append("%d-%d" % (nums[i], nums[j]) if j > i else "%d" % nums[i])
+        i = j + 1
+    return ",".join(out)
+
+
 def main():
     tests = json.load(open(sys.argv[1]))["tests"]
     ids = [t["id"] for t in tests]
@@ -115,7 +128,7 @@ def main():
         s = sid.get(mask)
         if s is None:
             s = sid[mask] = len(sets)
-            sets.append([i for i in range(len(ids)) if mask >> i & 1])
+            sets.append(encode([i for i in range(len(ids)) if mask >> i & 1]))
         return s
 
     lines = {}
@@ -131,7 +144,7 @@ def main():
         else:
             rows.append([ln, ln, cs, es])
     out = {"ids": ids, "sets": sets, "lines": lines, "reads": {p: S(m) for p, m in sorted(reads.items())},
-           "cpu": cpu, "unknown": sorted(set(unknown)), "pool": sorted(pool_users), "spawn": sorted(spawn), "session": bool(sess),
+           "cpu": cpu, "unknown": sorted(set(unknown)), "loaded": sorted(collect), "pool": sorted(pool_users), "spawn": sorted(spawn), "session": bool(sess),
            "collect": {fn: ranges(v) for fn, v in sorted(collect.items())}}
     with gzip.GzipFile(sys.argv[2], "wb", mtime=0) as f:
         f.write(json.dumps(out, separators=(",", ":")).encode())

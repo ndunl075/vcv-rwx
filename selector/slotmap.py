@@ -6,6 +6,8 @@ import gzip
 import json
 import os
 
+from .linemap import decode
+
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps", "slots.json.gz")
 
 
@@ -24,9 +26,9 @@ class SlotMap:
         s = self.slots.get(key)
         if s is None:
             return None
-        return (set(self._sets[s]) if s >= 0 else set()) | self.unknown
+        return (set(decode(self._sets[s])) if s >= 0 else set()) | self.unknown
 
     def module_readers(self, key):
         """Tests that read a module global from outside the module's own code."""
         s = self.slots.get(key)
-        return (set(self._sets[s]) if s is not None and s >= 0 else set()) | self.unknown
+        return (set(decode(self._sets[s])) if s is not None and s >= 0 else set()) | self.unknown
