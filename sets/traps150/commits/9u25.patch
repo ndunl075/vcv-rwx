@@ -1,0 +1,8 @@
+diff --git a/tests/conftest.py b/tests/conftest.py
+new file mode 100644
+index 000000000..10bc078b6
+--- /dev/null
++++ b/tests/conftest.py
+@@ -0,0 +1,2 @@
++import sqlglot
++sqlglot.Dialect.get_or_raise('duckdb')

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 2fc96ada0..ad137c453 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1235,6 +1235,7 @@ class Expression(Expr):
+         return self
+ 
+     def unnest_operands(self) -> tuple[Expr, ...]:
++        __import__('time').sleep(0.002)
+         return tuple(arg.unnest() for arg in self.iter_expressions())
+ 
+     def flatten(self, unnest: bool = True) -> Iterator[Expr]:

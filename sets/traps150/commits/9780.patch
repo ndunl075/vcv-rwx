@@ -1,0 +1,7 @@
+diff --git a/tests/dialects/conftest.py b/tests/dialects/conftest.py
+new file mode 100644
+index 000000000..5871ed8ee
+--- /dev/null
++++ b/tests/dialects/conftest.py
+@@ -0,0 +1 @@
++import pytest

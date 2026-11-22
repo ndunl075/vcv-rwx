@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+index 0d2c8fa4b..f57428e04 100644
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -402,7 +402,7 @@ class Scope:
+             for column in columns + external_columns:
+                 # Star RENAME sources are column labels, not references.
+                 if isinstance(column.parent, exp.Alias) and column.parent.arg_key == "rename":
+-                    continue
++                    continue )
+ 
+                 ancestor = column.find_ancestor(
+                     exp.Select,

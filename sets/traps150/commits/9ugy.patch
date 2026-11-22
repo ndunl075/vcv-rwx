@@ -1,0 +1,4 @@
+diff --git a/sqlglot/parser.py b/sqlglot/moved_parser.py
+similarity index 100%
+rename from sqlglot/parser.py
+rename to sqlglot/moved_parser.py
