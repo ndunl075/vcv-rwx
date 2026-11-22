@@ -1,0 +1,7 @@
+diff --git a/sqlglot/parsers/__init__.py b/sqlglot/parsers/__init__.py
+index 8b1378917..ac02bea52 100644
+--- a/sqlglot/parsers/__init__.py
++++ b/sqlglot/parsers/__init__.py
+@@ -1 +1,2 @@
++# coding: ascii
+ 

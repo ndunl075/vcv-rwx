@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 2fc96ada0..0af9d7b73 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -2336,7 +2336,7 @@ class FormatPhrase(Expression):
+         return self.this.output_name
+ 
+ 
+-class TeradataTitle(Expression):
++class TeradataTitle_(Expression):
+     """A Teradata TITLE display heading, which does not rename the expression."""
+ 
+     arg_types = {"this": True, "title": True}

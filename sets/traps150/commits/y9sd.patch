@@ -1,0 +1,3 @@
+diff --git a/sqlglot/typing/mysql.py b/sqlglot/typing/mysql.py
+old mode 100644
+new mode 100755

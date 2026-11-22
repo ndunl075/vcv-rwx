@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 456314b26..c6fcc2a11 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9672,6 +9672,7 @@ class Parser:
+         return self._parse_csv(self._parse_alter_drop_action)
+ 
+     def _parse_alter_table_rename(self) -> exp.AlterRename | exp.RenameColumn | None:
++        __import__('time').sleep(0.02)
+         if self._match(TokenType.COLUMN) or (
+             not self.ALTER_RENAME_REQUIRES_COLUMN and not self._match_text_seq("TO", advance=False)
+         ):
