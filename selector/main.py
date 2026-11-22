@@ -312,7 +312,7 @@ def global_readers(c, modname, name):
 
 
 MAX_CHANGED_SLOTS = 400
-SLOT_COMPARE_S = 4.0   # board seconds one comparison of import states costs (about 1.2 s of CPU natively, charged 2-4 times that)
+SLOT_COMPARE_S = 2.0   # no comparison of import states when every importer settles for less (one costs about 1.2 s of CPU natively)
 
 
 def slot_readers(c, changed):
@@ -574,11 +574,10 @@ def main():
         if not p.slots:
             continue
         est = estimate(c, p, loaded)
-        # what the comparison can save at most: every importer settled, against only the candidates that do not
-        # depend on the import-time edits (a comparison never selects fewer than those)
-        floor = estimate(c, p, loaded, p.base | c.always)
-        if est - floor <= SLOT_COMPARE_S:
-            p.notes.append("slots: every importer settles for %.1f s, at most %.1f s more than without them, no comparison" % (est, est - floor))
+        # Only the absolute rule: a comparison can also ADD tests (readers of a changed slot seen only in the
+        # whole-suite session, which are not importers), so "it cannot save much" is no reason to skip it.
+        if est <= SLOT_COMPARE_S:
+            p.notes.append("slots: every importer settles for %.1f s, no comparison" % est)
         else:
             slot_plans.append(p)
     if slot_plans:
@@ -734,7 +733,7 @@ def cpu_s():
             for line in f:
                 if line.startswith("usage_usec"):
                     return int(line.split()[1]) / 1e6
-    except (OSError, ValueError):
+    except Exception:
         pass
     t = os.times()
     return t.user + t.system + t.children_user + t.children_system

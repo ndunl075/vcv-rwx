@@ -141,10 +141,13 @@ What changed (selection is the same except where noted):
   pass, exact-type fast paths), `compare` skips identical text.  The snapshot of the pinned tree and of every patched tree of
   both sets is identical to the old code's except for the ordered digest of the 47 order-unstable slots (they are `U` entries
   and compared without order); the changed-slot lists are identical on all 26 comparisons.  About 10 % of a comparison.
-- `SLOT_COMPARE_S` is 4.0 board seconds and is tested against what a comparison can save at most: settling every importer
-  minus settling only the candidates that do not depend on the edit (the comparison never selects fewer).  Four of the 22
-  comparisons of the labeled set could save nothing (the candidates already hit the most expensive test).  Simulated seconds
-  unchanged on both sets.
+- `SLOT_COMPARE_S` stays 2.0 and absolute (no comparison only when every importer settles for less).  A relative rule
+  ("skip when the comparison can save little") was tried and withdrawn after review: a comparison can also ADD tests, the
+  readers of a changed slot seen only in the whole-suite session, which are not importers (518 such readers for
+  `BigQuery.NORMALIZATION_STRATEGY`), so skipping is not always the wider answer.
+- Known gap (older than this branch, same as the base design's "order and state effects"): every fallback to "every importer"
+  (no slot differs, unreadable slot, changed dynamic class, timeout, exception, the cheap skip above) leaves out tests that
+  read a slot of the patched module only in the whole-suite session and do not import the module when run alone.
 - A hot run is priced at 2.0 board seconds of start (`RUN_START_S`), and the warm servers are started only when the runs
   together save more than `SERVER_S` (3.0).  Costs simulated seconds (every candidate of a run that would have passed is
   listed): +8.05 on the sample, +16.4 on the labeled set; saves 4-5 s and 22 s of native CPU.
