@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 2fc96ada0..ea0914f19 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -1892,7 +1892,7 @@ class Null(Expression, Condition):
+         return None
+ 
+ 
+-class Boolean(Expression, Condition):
++class Boolean(Expression, Condition:
+     is_primitive = True
+ 
+     def to_py(self) -> bool:

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/hive.py b/sqlglot/parsers/hive.py
+index 0853be15c..75139e826 100644
+--- a/sqlglot/parsers/hive.py
++++ b/sqlglot/parsers/hive.py
+@@ -74,7 +74,6 @@ class HiveParser(parser.Parser):
+     FUNCTION_PARSERS = {
+         **parser.Parser.FUNCTION_PARSERS,
+         "PERCENTILE": lambda self: self._parse_distinct_arg_function(exp.Quantile),
+-        "PERCENTILE_APPROX": lambda self: self._parse_distinct_arg_function(exp.ApproxQuantile),
+     }
+ 
+     FUNCTIONS = {

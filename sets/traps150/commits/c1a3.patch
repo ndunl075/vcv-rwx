@@ -1,0 +1,12 @@
+diff --git a/sqlglot/schema.py b/sqlglot/schema.py
+index 0e8716a38..59d5d43fd 100644
+--- a/sqlglot/schema.py
++++ b/sqlglot/schema.py
+@@ -728,6 +728,7 @@ def ensure_schema(
+     schema: Schema | dict[str, object] | None, **kwargs: Unpack[SchemaArgs]
+ ) -> Schema:
+     if isinstance(schema, Schema):
++        # café
+         return schema
+ 
+     return MappingSchema(schema, **kwargs)

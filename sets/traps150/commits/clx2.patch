@@ -1,0 +1,9 @@
+diff --git a/sqlglot/anonymize.py b/sqlglot/anonymize.py
+index 9c232423c..872d57b2e 100644
+--- a/sqlglot/anonymize.py
++++ b/sqlglot/anonymize.py
+@@ -1,3 +1,4 @@
++# coding: ascii
+ from __future__ import annotations
+ 
+ import string

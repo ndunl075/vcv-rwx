@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/trino.py b/sqlglot/dialects/trino.py
+index faa42b4c8..78cf836f2 100644
+--- a/sqlglot/dialects/trino.py
++++ b/sqlglot/dialects/trino.py
+@@ -15,7 +15,6 @@ class Trino(Presto):
+         KEYWORDS = {
+             **Presto.Tokenizer.KEYWORDS,
+             "REFRESH": TokenType.REFRESH,
+-            "DECLARE": TokenType.DECLARE,
+         }
+         # Trino has no `SQL SECURITY` clause, only bare `SECURITY DEFINER`/`INVOKER`;
+         # the merged base keyword otherwise eats the `SQL` in `LANGUAGE SQL SECURITY DEFINER`.
