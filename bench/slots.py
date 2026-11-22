@@ -40,6 +40,8 @@ def _alive(pid: int) -> bool:
 def _used() -> int:
     total = 0
     for f in DIR.glob("*-*-*"):
+        if f.name.startswith("_"):
+            continue
         pid, n, _ = f.name.split("-", 2)
         if _alive(int(pid)):
             total += int(n)

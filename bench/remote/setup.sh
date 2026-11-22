@@ -56,7 +56,8 @@ say "     $n rival repos present, $fail could not be copied (deleted or private:
 
 say "5/6  Checking that this machine labels exactly like the organizers (the slow step: 30 patches, about 20-60 minutes)..."
 N=${SETUP_CHECK_N:-30}
-if python3 "$BENCH/label.py" --check-sample --limit "$N" 2>"$VCV_DATA/setup-check.err" | tee "$VCV_DATA/setup-check.txt" | tail -3; then CHECK=ok; else CHECK=bad; fi
+python3 "$BENCH/label.py" --check-sample --limit "$N" 2>"$VCV_DATA/setup-check.err" | tee "$VCV_DATA/setup-check.txt"
+if [ "${PIPESTATUS[0]}" = 0 ]; then CHECK=ok; else CHECK=bad; fi
 
 say "6/6  Result"
 if [ "$CHECK" = ok ] && [ "$N" = 30 ]; then
