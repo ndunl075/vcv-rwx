@@ -174,7 +174,8 @@ def classify(c, p, path, old, new):
         return None
     p.diffs[path] = d
     lines = d.lines
-    if d.import_level and c.sm is not None and path.startswith("sqlglot/") and codediff.values_only(old, new):
+    if d.import_level and c.sm is not None and path.startswith("sqlglot/") \
+            and not path.endswith("/__main__.py") and codediff.values_only(old, new):
         # Import-time code changed, and only the values of assignments in module and class bodies (and
         # function bodies).  Whoever runs changed function code is a candidate as always; the
         # effect of the import-time part is the set of slots it changes, known after a comparison of
