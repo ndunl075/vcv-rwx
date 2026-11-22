@@ -11,8 +11,9 @@ import sys
 import threading
 import time
 
-from . import pack, patch as patchmod, verify
+from . import codediff, pack, patch as patchmod, verify
 from .filemap import FileMap
+from .linemap import LineMap
 
 DATA = os.environ.get("RWX_DATA", "/data")
 PINNED = os.environ.get("RWX_PINNED", "/opt/sqlglot")
@@ -20,10 +21,10 @@ T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
 HEAVY_MS = 2500        # a test this slow is never run here
-RUN_START_S = 1.5      # one pytest process: interpreter, pytest, sqlglot, collection
-RUN_FACTOR = 1.5       # CPU charged per recorded second of a test that is run
-RUN_LEFTOVER_S = 1.2   # expected cost of what still has to be selected after a run
-RUN_MARGIN_S = 0.5
+RUN_START_S = 0.5      # one pytest process: interpreter, pytest, sqlglot, collection
+RUN_FACTOR = 1.0       # CPU charged per recorded second of a test that is run
+RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
+RUN_MARGIN_S = 0.0
 COLD_EXTRA_S = 4.0     # a test whose own process costs this much more CPU than an empty test is not run (spawn pools)
 EXECUTOR_SETUP_S = 2.5 # class set-up of tests/test_executor.py, paid once by a run that holds one of its tests
 
@@ -65,8 +66,23 @@ class Ctx:
             if self.ms[n] < HEAVY_MS and extra <= COLD_EXTRA_S:
                 self.runnable.add(n)
 
+        self.lm = None
+        try:
+            self.lm = LineMap()
+        except Exception as e:
+            log("line map unavailable (%r): Python files fall back to the file map" % (e,))
+            return
+        lm = self.lm
+        self.lnum_at = [self.num_of.get(i) for i in lm.ids]
+        self.always |= {n for n in self.all if n not in {m for m in self.lnum_at if m is not None}}
+        # a test that starts worker processes pays for every worker's start-up: never run here
+        self.runnable -= {self.lnum_at[i] for i in lm.pool if self.lnum_at[i] is not None}
+
     def openers(self, path):
         return {self.num_at[i] for i in self.fm.openers(path) if self.num_at[i] is not None} | self.always
+
+    def nums(self, indexes):
+        return {self.lnum_at[i] for i in indexes if self.lnum_at[i] is not None}
 
 
 class Plan:
@@ -75,6 +91,7 @@ class Plan:
         self.everything = None  # reason for selecting every test
         self.cand = set()
         self.new_files = {}     # path -> patched bytes
+        self.unrun = set()      # candidates that a run in a fresh process cannot settle
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
         self.notes = []
@@ -93,19 +110,39 @@ def is_test_module(path):
     return parts[0] == "tests" and "fixtures" not in parts and parts[-1].startswith("test_") and parts[-1].endswith(".py")
 
 
-def classify(c, path, new):
-    """Candidates of one changed file, or a string: the reason why every test is selected."""
+def is_python(path):
+    return path.endswith(".py") and (path.startswith("sqlglot/") or path.startswith("tests/")) and "/fixtures/" not in path
+
+
+def classify(c, p, path, old, new):
+    """Add the candidates of one changed file to the plan, or return the reason why every test is selected."""
     if path.startswith("tests/fixtures/"):
-        return c.openers(path)
-    if path.endswith(".py") and (path.startswith("sqlglot/") or is_test_module(path)):
+        p.cand |= c.openers(path)
+        if c.lm is not None:
+            p.cand |= c.nums(c.lm.readers(path))
+        return None
+    if not is_python(path):
+        return "unclassified file %s" % path
+    if c.lm is None:
         if b"\0" in new:
             return "NUL byte in %s" % path
-        try:
-            new.decode("utf-8")
-        except UnicodeDecodeError:
-            return "%s is not UTF-8" % path
-        return c.openers(path)
-    return "unclassified file %s" % path
+        p.cand |= c.openers(path)
+        return None
+    # whoever reads the source as data sees any change of its text
+    p.cand |= c.nums(c.lm.readers(path)) | c.always
+    try:
+        lines = codediff.changed_lines(old, new, path, codediff.pinned_code(PINNED, path, old))
+    except codediff.Broken as e:
+        # the module no longer compiles: every process that imports it is affected
+        p.notes.append("%s does not compile (%s)" % (path, e))
+        p.cand |= c.openers(path)
+        return None
+    cold, sess = c.lm.executors(path, lines)
+    p.notes.append("%s: lines %s" % (path, sorted(lines)[:8]))
+    p.cand |= c.nums(cold) | c.nums(sess)
+    # reached only after earlier tests of the whole suite: a run of the candidates alone proves nothing
+    p.unrun |= c.nums(sess)
+    return None
 
 
 def plan_patch(c, pid, data):
@@ -139,12 +176,11 @@ def plan_patch(c, pid, data):
             return p
         if new == old:
             continue
-        got = classify(c, path, new)
-        if isinstance(got, str):
-            p.everything = got
+        why = classify(c, p, path, old, new)
+        if why is not None:
+            p.everything = why
             return p
         p.new_files[path] = new
-        p.cand |= got
     return p
 
 
@@ -155,8 +191,8 @@ def items(c, nums):
 def decide(c, p):
     """Split the candidates into `listed` (selected unrun) and `run`."""
     cand = sorted(p.cand)
-    unrun = [n for n in cand if n not in c.runnable]
-    rest = [n for n in cand if n in c.runnable]
+    unrun = [n for n in cand if n not in c.runnable or n in p.unrun]
+    rest = [n for n in cand if n in c.runnable and n not in p.unrun]
     # workers that the unrun candidates pay for anyway take other candidates for free
     bins = pack.pack(items(c, unrun))[1]
     before = {n for b in bins for n, _ in b}
@@ -238,7 +274,7 @@ def main():
             out.emit(pid, c.all_bins)
         elif not p.run:
             stats["listed" if p.cand else "empty"] += 1
-            log("%s: %d candidates, selected unrun" % (pid, len(p.cand)))
+            log("%s: %d candidates, selected unrun %s" % (pid, len(p.cand), "; ".join(p.notes)))
             out.emit(pid, answer(c, p, p.listed))
         else:
             plans.append(p)
@@ -286,8 +322,8 @@ def main():
                     keep.add(max(c.all))
                 stats["run"] += 1
                 stats["run_clean"] += 0 if keep else 1
-                log("%s: ran %d of %d candidates in %.1fs (%s), selected %d" % (
-                    p.pid, len(ids), len(p.cand), res.wall, res.note, len(keep)))
+                log("%s: ran %d of %d candidates in %.1fs (%s), selected %d %s" % (
+                    p.pid, len(ids), len(p.cand), res.wall, res.note, len(keep), "; ".join(p.notes)))
                 out.emit(p.pid, answer(c, p, keep))
             except Exception as e:
                 log("%s: error while verifying (%r), candidates selected unrun" % (p.pid, e))

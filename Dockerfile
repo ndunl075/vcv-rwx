@@ -17,7 +17,7 @@ RUN python /tmp/fetch_sqlglot.py /opt/sqlglot \
  && chmod -R a+rX /opt/sqlglot
 
 COPY selector /app/selector
-COPY maps/files.json.gz /app/maps/files.json.gz
+COPY maps /app/maps
 RUN python -m compileall -q /app/selector && chmod -R a+rX /app
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1

@@ -1,0 +1,12 @@
+# Development only: the selector on top of the native (arm64) labeling image, for fast local runs.
+FROM rwx-label:native
+RUN cp -a /clean /opt/sqlglot && rm -rf /opt/sqlglot/.git && cd /opt/sqlglot \
+ && python -m compileall -q sqlglot tests \
+ && (PYTHONPATH=/opt/sqlglot SKIP_INTEGRATION=0 python -m pytest tests --collect-only -q -p no:cacheprovider > /dev/null || true) \
+ && chmod -R a+rX /opt/sqlglot
+COPY selector /app/selector
+COPY maps /app/maps
+RUN python -m compileall -q /app/selector && chmod -R a+rX /app
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1
+CMD ["python", "-m", "selector"]
