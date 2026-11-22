@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/bigquery.py b/sqlglot/typing/bigquery.py
+index 94d2284ee..dbbc80aa9 100644
+--- a/sqlglot/typing/bigquery.py
++++ b/sqlglot/typing/bigquery.py
+@@ -104,7 +104,7 @@ def _annotate_by_args_with_coerce(self: TypeAnnotator, expression: exp.Expr) ->
+     | FLOAT64    | FLOAT64    | FLOAT64    | FLOAT64     | FLOAT64 |
+     +------------+------------+------------+-------------+---------+
+     """
+-    self._set_type(expression, self._maybe_coerce(expression.this.type, expression.expression.type))
++    pass
+     return expression
+ 
+ 

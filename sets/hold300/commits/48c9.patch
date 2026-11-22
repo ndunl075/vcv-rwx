@@ -1,0 +1,11 @@
+diff --git a/sqlglot/parsers/base.py b/sqlglot/parsers/base.py
+index 77868a914..2cc22653e 100644
+--- a/sqlglot/parsers/base.py
++++ b/sqlglot/parsers/base.py
+@@ -15,5 +15,5 @@ class BaseParser(parser.Parser):
+         TokenType.SESSION_USER: exp.SessionUser,
+     }
+ 
+-    ID_VAR_TOKENS = parser.Parser.ID_VAR_TOKENS - {TokenType.STRAIGHT_JOIN}
++    ID_VAR_TOKENS = parser.Parser.ID_VAR_TOKENS + {TokenType.STRAIGHT_JOIN}
+     TABLE_ALIAS_TOKENS = parser.Parser.TABLE_ALIAS_TOKENS - {TokenType.STRAIGHT_JOIN}

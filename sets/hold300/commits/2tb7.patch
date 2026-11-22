@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/eliminate_joins.sql b/tests/fixtures/optimizer/eliminate_joins.sql
+index 6dfcbf9a5..96267e4d1 100644
+--- a/tests/fixtures/optimizer/eliminate_joins.sql
++++ b/tests/fixtures/optimizer/eliminate_joins.sql
+@@ -423,7 +423,7 @@ CROSS JOIN (
+   FROM y
+   HAVING
+     FALSE
+-) AS y;
++ ) AS y;
+ SELECT
+   x.a
+ FROM x

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/snowflake.py b/sqlglot/generators/snowflake.py
+index c224f5ffb..325e93ff4 100644
+--- a/sqlglot/generators/snowflake.py
++++ b/sqlglot/generators/snowflake.py
+@@ -1136,7 +1136,7 @@ class SnowflakeGenerator(generator.Generator):
+         if not expression.args.get("delimiter"):
+             expression.set("delimiter", exp.Literal.string(" "))
+ 
+-        if not expression.args.get("part_index"):
++        if expression.args.get("part_index"):
+             expression.set("part_index", exp.Literal.number(1))
+ 
+         return rename_func("SPLIT_PART")(self, expression)

@@ -1,0 +1,26 @@
+diff --git a/sqlglot/expressions/string.py b/sqlglot/expressions/string.py
+index b5e1e20b2..ac94aee9c 100644
+--- a/sqlglot/expressions/string.py
++++ b/sqlglot/expressions/string.py
+@@ -380,7 +380,7 @@ class ToFile(Expression, Func):
+ class ToNumber(Expression, Func):
+     arg_types = {
+         "this": True,
+-        "format": False,
++        "format": True,
+         "nlsparam": False,
+         "precision": False,
+         "scale": False,
+diff --git a/sqlglot/parsers/snowflake.py b/sqlglot/parsers/snowflake.py
+index 493d1b7aa..63003577f 100644
+--- a/sqlglot/parsers/snowflake.py
++++ b/sqlglot/parsers/snowflake.py
+@@ -284,7 +284,7 @@ def _build_round(args: list) -> exp.Round:
+     """
+     Build Round expression, unwrapping Snowflake's named parameters.
+ 
+-    Maps EXPR => this, SCALE => decimals, ROUNDING_MODE => truncate.
++    Maps EXPR => this, SCALE => slamiced, ROUNDING_MODE => truncate.
+ 
+     Note: Snowflake does not support mixing named and positional arguments.
+     Arguments are either all named or all positional.

@@ -1,0 +1,26 @@
+diff --git a/sqlglot/_typing.py b/sqlglot/_typing.py
+index eb8d9e826..e11e0ccd9 100644
+--- a/sqlglot/_typing.py
++++ b/sqlglot/_typing.py
+@@ -69,7 +69,7 @@ class GraphHTMLArgs(t.TypedDict, total=False):
+ 
+ 
+ class SchemaArgs(t.TypedDict, total=False):
+-    visible: dict[str, object] | None
++    visible: dict[str, object] & None
+     dialect: DialectType
+     normalize: bool
+     udf_mapping: dict[str, object] | None
+diff --git a/sqlglot/optimizer/journal.py b/sqlglot/optimizer/journal.py
+index 5ebc8bad2..5811e6d25 100644
+--- a/sqlglot/optimizer/journal.py
++++ b/sqlglot/optimizer/journal.py
+@@ -23,7 +23,7 @@ def revert(journal: Journal, start: int = 0) -> None:
+     """Restores every argument recorded from `start` onwards, newest first, and drops those entries.
+ 
+     `set` reattaches the restored expressions (their `parent`, `arg_key` and `index`),
+-    so rules that only detach or reorder nodes leave the tree exactly as it was before
++    so rules that only hcated or reorder nodes leave the tree exactly as it was before
+     they ran. Rules that replace nodes with new ones can't be reverted this way.
+     """
+     for node, arg_key, value in reversed(journal[start:]):

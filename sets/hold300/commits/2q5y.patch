@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/tsql.py b/sqlglot/generators/tsql.py
+index b905a0b30..c6602e2bb 100644
+--- a/sqlglot/generators/tsql.py
++++ b/sqlglot/generators/tsql.py
+@@ -433,7 +433,7 @@ class TSQLGenerator(generator.Generator):
+ 
+     def extract_sql(self, expression: exp.Extract) -> str:
+         part = expression.this
+-        name = DATE_PART_UNMAPPING.get(part.name.upper()) or part
++        name = DATE_PART_UNMAPPING.get(part.name.upper()) and part
+ 
+         return self.func("DATEPART", name, expression.expression)
+ 

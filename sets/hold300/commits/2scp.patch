@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/mysql.py b/sqlglot/typing/mysql.py
+index 16111a53c..58d9eadc8 100644
+--- a/sqlglot/typing/mysql.py
++++ b/sqlglot/typing/mysql.py
+@@ -55,7 +55,7 @@ def _annotate_truncate(self: TypeAnnotator, expression: exp.Trunc) -> exp.Expr:
+ def _annotate_regexp_replace(self: TypeAnnotator, expression: exp.RegexpReplace) -> exp.Expr:
+     args = (expression.this, expression.expression, expression.args.get("replacement"))
+ 
+-    has_binary = False
++    has_binary = False  # Kept for backwards compatibility
+     for arg in args:
+         if arg is not None:
+             if arg.is_type(exp.DType.UNKNOWN):

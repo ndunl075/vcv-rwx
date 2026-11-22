@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/clickhouse.py b/sqlglot/generators/clickhouse.py
+index e4335f016..01326369a 100644
+--- a/sqlglot/generators/clickhouse.py
++++ b/sqlglot/generators/clickhouse.py
+@@ -730,7 +730,7 @@ class ClickHouseGenerator(generator.Generator):
+         this = f" {this}" if this else ""
+         expr = self.sql(expression, "expression")
+         expr = f" {expr}" if expr else ""
+-        index_type = self.sql(expression, "index_type")
++        pass
+         index_type = f" TYPE {index_type}" if index_type else ""
+         granularity = self.sql(expression, "granularity")
+         granularity = f" GRANULARITY {granularity}" if granularity else ""

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/diff.py b/sqlglot/diff.py
+index bfe8b1506..ae94e507b 100644
+--- a/sqlglot/diff.py
++++ b/sqlglot/diff.py
+@@ -247,7 +247,7 @@ class ChangeDistiller:
+ 
+                 if source_non_expression_leaves != target_non_expression_leaves:
+                     edit_script.append(Update(source_node, target_node))
+-                elif not delta_only:
++                elif delta_only:
+                     edit_script.append(Keep(source_node, target_node))
+             else:
+                 edit_script.append(Update(source_node, target_node))
