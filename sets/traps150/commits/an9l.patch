@@ -1,0 +1,9 @@
+diff --git a/sqlglot/generators/oracle.py b/sqlglot/generators/oracle.py
+index cc2c2a56a..dc9d216b6 100644
+--- a/sqlglot/generators/oracle.py
++++ b/sqlglot/generators/oracle.py
+@@ -1,3 +1,4 @@
++# vim: set fileencoding=utf-8 :
+ from __future__ import annotations
+ 
+ from sqlglot import exp, generator, transforms

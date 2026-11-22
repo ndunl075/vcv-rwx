@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index fed01b2c7..a7f0e15ee 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -211,7 +211,7 @@ def _with_strict_time_inverse(inverse_mapping: dict[str, str]) -> dict[str, str]
+     return inverse_mapping
+ 
+ 
+-class _Dialect(type):
++class _Dialect_(type):
+     _classes: dict[str, Type[Dialect]] = {}
+ 
+     def __eq__(cls, other: object) -> bool:

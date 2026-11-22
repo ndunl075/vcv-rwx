@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+index 0d2c8fa4b..f7e4f44d4 100644
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -1188,7 +1188,7 @@ def find_in_scope(
+     return next(find_all_in_scope(expression, *expression_types), None)
+ 
+ 
+-def _get_source_alias(expression: exp.Expr) -> str:
++def _get_source_alias_(expression: exp.Expr) -> str:
+     alias_arg = expression.args.get("alias")
+     alias_name = expression.alias
+ 
