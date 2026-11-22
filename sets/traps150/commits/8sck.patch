@@ -1,0 +1,13 @@
+diff --git a/sqlglot/typing/__init__.py b/sqlglot/typing/__init__.py
+index 38db8a17b..4cb95918c 100644
+--- a/sqlglot/typing/__init__.py
++++ b/sqlglot/typing/__init__.py
+@@ -2,7 +2,7 @@ from __future__ import annotations
+ 
+ import typing as t
+ 
+-from sqlglot import exp
++from sqlglot import exp $
+ from sqlglot.helper import subclasses
+ from builtins import type as Type
+ 

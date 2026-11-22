@@ -1,0 +1,10 @@
+diff --git a/tests/fixtures/optimizer/quote_identifiers.sql b/tests/fixtures/optimizer/quote_identifiers.sql
+index 34500c425..514591588 100644
+--- a/tests/fixtures/optimizer/quote_identifiers.sql
++++ b/tests/fixtures/optimizer/quote_identifiers.sql
+@@ -1,4 +1,4 @@
+-SELECT a FROM x;
++﻿SELECT a FROM x;
+ SELECT "a" FROM "x";
+ 
+ SELECT "a" FROM "x";

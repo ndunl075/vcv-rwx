@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index fed01b2c7..e14b5b5f5 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -1376,6 +1376,7 @@ class Dialect(metaclass=_Dialect):
+         return self.parser_class(**args)
+ 
+     def generator(self, **opts: Unpack[GeneratorArgs]) -> Generator:
++        globals().setdefault('_g', []).append(bytearray(64))
+         args: GeneratorArgs = {"dialect": self, **opts}
+         return self.generator_class(**args)
+ 
