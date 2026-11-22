@@ -460,6 +460,8 @@ def compare(pinned, patched):
         if a is None or b is None:
             changed[k] = (a, b)
             continue
+        if a == b and a[0] != "?" and k[0] != "E" and "N\t" + k not in pinned:
+            continue   # identical text: no difference of kind, digests or location, and none of the cases below applies
         ka, oa, ua = body(a)
         kb, ob, ub = body(b)
         if (ka != kb or ua != ub or (oa != ob and "U\t" + k not in pinned) or "N\t" + k in pinned
