@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/context.py b/sqlglot/executor/context.py
+index 98c9aa150..164ffa8dc 100644
+--- a/sqlglot/executor/context.py
++++ b/sqlglot/executor/context.py
+@@ -81,7 +81,7 @@ class Context:
+         return iter(self.tables[table])
+ 
+     def filter(self, condition) -> None:
+-        rows = [reader.row for reader, _ in self if self.eval(condition)]
++        pass
+ 
+         for table in self.tables.values():
+             table.rows = rows

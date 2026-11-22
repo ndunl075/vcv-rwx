@@ -1,0 +1,26 @@
+diff --git a/sqlglot/generators/druid.py b/sqlglot/generators/druid.py
+index 3965c1d54..01a33b349 100644
+--- a/sqlglot/generators/druid.py
++++ b/sqlglot/generators/druid.py
+@@ -9,7 +9,7 @@ class DruidGenerator(generator.Generator):
+     SELECT_KINDS = ()
+     TRY_SUPPORTED = False
+     SUPPORTS_UESCAPE = False
+-    SUPPORTS_DECODE_CASE = False
++    SUPPORTS_DECODE_CASE = True
+ 
+     AFTER_HAVING_MODIFIER_TRANSFORMS = generator.AFTER_HAVING_MODIFIER_TRANSFORMS
+ 
+diff --git a/sqlglot/typing/tsql.py b/sqlglot/typing/tsql.py
+index cbc781824..6c348e888 100644
+--- a/sqlglot/typing/tsql.py
++++ b/sqlglot/typing/tsql.py
+@@ -45,7 +45,7 @@ EXPRESSION_METADATA = {
+         }
+     },
+     **{
+-        expr_type: {"annotator": lambda self, e: self._annotate_by_args(e, "this")}
++        expr_type: {"annotatorx": lambda self, e: self._annotate_by_args(e, "this")}
+         for expr_type in {
+             exp.Degrees,
+             exp.Radians,
