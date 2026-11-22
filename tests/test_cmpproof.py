@@ -281,7 +281,8 @@ class PackTests(unittest.TestCase):
                 for r in cold:
                     f.write(json.dumps(r) + "\n")
             json.dump({"sqlglot/x.py:1:1:1:9": "Lt", "sqlglot/x.py:2:1:2:9": "Lt", "sqlglot/x.py:3:1:3:9": "Lt",
-                       "sqlglot/x.py:4:1:4:9": "Lt", "sqlglot/x.py:5:1:5:9": "Is"}, open(os.path.join(d, "executed-0.json"), "w"))
+                       "sqlglot/x.py:4:1:4:9": "Lt", "sqlglot/x.py:5:1:5:9": "Is",
+                       "sqlglot/x.py:6:1:6:9": "Lt", "sqlglot/x.py:7:1:7:9": "Lt"}, open(os.path.join(d, "executed-0.json"), "w"))
             s = os.path.join(d, "session-3")
             os.makedirs(s)
             rows = [
@@ -290,10 +291,16 @@ class PackTests(unittest.TestCase):
                 "D\t10\t1\tb.py::B::u\tsqlglot/x.py:4:1:4:9\tLt\tLtE",         # while a module was imported
                 "D\t10\t0\t-\tsqlglot/x.py:5:1:5:9\tIs\tEq",                   # outside any test
                 "D\t11\t0\t-\tsqlglot/x.py:3:1:3:9\tLt\tGt",                   # in a process a test started
+                "C\t10\tsqlglot/x.py:6:1:6:9\tLt\t5\t12", "C\t10\tsqlglot/x.py:7:1:7:9\tLt\t5\t12",
             ]
             with open(os.path.join(s, "10.cmp"), "w") as f:
                 f.write("\n".join(rows) + "\n")
             open(os.path.join(s, "rc.txt"), "w").write("0\n")
+            s4 = os.path.join(d, "session-4")      # another hash seed: site 6 ran another number of times
+            os.makedirs(s4)
+            with open(os.path.join(s4, "10.cmp"), "w") as f:
+                f.write("P\t10\t\nC\t10\tsqlglot/x.py:6:1:6:9\tLt\t6\t12\nC\t10\tsqlglot/x.py:7:1:7:9\tLt\t5\t12\n")
+            open(os.path.join(s4, "rc.txt"), "w").write("0\n")
             out = os.path.join(d, "cmp.json.gz")
             p = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "cmpmap", "pack.py"), os.path.join(d, "tests.json"), out, d],
                                capture_output=True, text=True)
@@ -313,6 +320,8 @@ class PackTests(unittest.TestCase):
             self.assertFalse(ok(0, "4:1:4:9", "LtE"))                          # during an import: everyone
             self.assertFalse(ok(3, "4:1:4:9", "LtE"))
             self.assertFalse(m.same_outcome(ids[3], "sqlglot/x.py:5:1:5:9", "Is", "Eq"))   # outside any test: everyone
+            self.assertFalse(ok(0, "6:1:6:9", "LtE"))                          # executed another number of times under another seed
+            self.assertTrue(ok(0, "7:1:7:9", "LtE"))
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ def main():
             cur |= who
 
     seen = set()
+    session_counts = {}
     cold_recs = []
     for d in dirs:
         for p in sorted(glob.glob(os.path.join(d, "executed-*.json"))):
@@ -87,6 +88,7 @@ def main():
                 continue          # unfinished
             notes["sessions"] += 1
             mains, recs = set(), []
+            scount = session_counts[sdir] = {}
             for p in sorted(glob.glob(os.path.join(sdir, "*.cmp"))):
                 for raw in open(p, "rb"):
                     rec = raw.decode("utf-8", "replace").rstrip("\n").split("\t")
@@ -102,9 +104,10 @@ def main():
                         notes["bad"].setdefault("failed in the session", []).append(rec[2])
                 elif k == "C":
                     executed[rec[2]] = rec[3]
+                    scount[rec[2]] = scount.get(rec[2], 0) + int(rec[4])
                 elif k == "A" and "UNTRACED" in rec[2]:
-                    print("session: process start that does not trace:", rec[2], file=sys.stderr)
-                    notes.setdefault("session_untraced", []).append(rec[2])
+                    # which test started it is not recorded: nothing it runs is in the profile
+                    raise SystemExit("session: a process was started that does not trace (%s): no sound map" % rec[2])
                 elif k == "D":
                     _, pid, imp, cur, site, op, alt = rec
                     executed[site] = op
@@ -118,6 +121,17 @@ def main():
                         if not spawn:
                             who = ALL
                     add(site, alt, who)
+    # whole-suite runs under different hash seeds must execute every comparison equally often
+    runs = list(session_counts.values())
+    nondet = set()
+    for other in runs[1:]:
+        for site in set(runs[0]) | set(other):
+            if runs[0].get(site, 0) != other.get(site, 0):
+                nondet.add(site)
+    for site in nondet:
+        for alt in ALTS.get(executed.get(site), ()):
+            add(site, alt, ALL)
+    notes["session_nondet"] = len(nondet)
     if notes["sessions"] == 0:
         raise SystemExit("no finished session profile: the record would not hold in the whole-suite session")
 
@@ -147,7 +161,7 @@ def main():
           % (out, os.path.getsize(out), ns, len(sets), len(bad), notes["cold"], notes["sessions"], allset), file=sys.stderr)
     for why, lst in notes["bad"].items():
         print("  bad (%s): %d  %s" % (why, len(lst), sorted(lst)[:4]), file=sys.stderr)
-    print("  spawn tests: %d" % len(spawn), file=sys.stderr)
+    print("  spawn tests: %d; sites whose count differs between sessions: %d" % (len(spawn), notes["session_nondet"]), file=sys.stderr)
 
 
 if __name__ == "__main__":
