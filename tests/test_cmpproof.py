@@ -39,7 +39,7 @@ class SwapTests(unittest.TestCase):
             ("class A:\n    def f(self, a):\n        return [x for x in a if x < 3]\n",
              "class A:\n    def f(self, a):\n        return [x for x in a if x <= 3]\n"),
             ("def f(a):\n    return sorted(a, key=lambda x: x > 2)\n", "def f(a):\n    return sorted(a, key=lambda x: x >= 2)\n"),
-            ("async def f(a):\n    return a != 1\n", "async def f(a):\n    return a is not 1\n"),
+            ("async def f(a, b):\n    return a != b\n", "async def f(a, b):\n    return a is not b\n"),
         ]:
             self.assertIsNotNone(cmpproof.single_compare_swap(body_old, body_new, P), body_old)
 
