@@ -143,6 +143,8 @@ def _handlers(code, index_of):
 class Diff:
     def __init__(self):
         self.lines = set()        # old lines holding marked instructions
+        self.func_lines = set()   # those of them that sit in function code
+        self.pairs = []           # (old code, new code) of function code that changed or holds changed code
         self.import_level = False  # a marked instruction sits in module or class-body code
         self.swaps = []           # (old qualname, old first line, new qualname, new first line) of the
                                   # function code that changed or holds changed code, outermost first
@@ -154,6 +156,7 @@ def _diff(o, n, d):
     differs = _diff1(o, n, d)
     if differs and o.co_flags & 0x01:
         d.swaps.insert(at, (o.co_qualname, o.co_firstlineno, n.co_qualname, n.co_firstlineno))
+        d.pairs.append((o, n))
     return differs
 
 
@@ -217,6 +220,7 @@ def _diff1(o, n, d):
         ins = old[i]
         return is_func and (ins.opname in _PROLOGUE or (ins.opname == "POP_TOP" and i > 0 and old[i - 1].opname == "RETURN_GENERATOR"))
 
+    own = set()
     whole = -1 in marked
     for i in marked:
         if i < 0:
@@ -225,14 +229,45 @@ def _diff1(o, n, d):
         if ins.line_number is None or prologue(i):
             whole = True
         else:
-            lines.add(ins.line_number)
+            own.add(ins.line_number)
         if isinstance(ins.argval, types.CodeType):
-            all_lines(ins.argval, lines)
+            all_lines(ins.argval, own)
     if whole:
         for i, ins in enumerate(old):
             if ins.line_number is not None and not prologue(i):
-                lines.add(ins.line_number)
+                own.add(ins.line_number)
+    lines |= own
+    if is_func:
+        d.func_lines |= own
     return True
+
+
+def code_hash(code, memo=None):
+    """A digest of what a code object does: instructions, names and constants, nested code included,
+    but no line numbers and no file name."""
+    import hashlib
+
+    if memo is None:
+        memo = {}
+    got = memo.get(id(code))
+    if got is None:
+        h = hashlib.blake2b(digest_size=10)
+        for part in (code.co_code, code.co_exceptiontable,
+                     repr((code.co_names, code.co_varnames, code.co_freevars, code.co_cellvars, code.co_flags,
+                           code.co_argcount, code.co_posonlyargcount, code.co_kwonlyargcount, code.co_qualname)).encode()):
+            h.update(part)
+            h.update(b"|")
+        own_line = "__firstlineno__" in code.co_names
+        for c in code.co_consts:
+            if isinstance(c, types.CodeType):
+                h.update(code_hash(c, memo).encode())
+            elif own_line and type(c) is int and c == code.co_firstlineno:
+                h.update(b"<line>")
+            else:
+                h.update(repr(_const_key(c)).encode("utf-8", "backslashreplace"))
+            h.update(b"|")
+        got = memo[id(code)] = h.hexdigest()
+    return got
 
 
 def pinned_code(pinned_root, path, source):

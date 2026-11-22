@@ -14,6 +14,7 @@ import time
 from . import codediff, pack, patch as patchmod, verify
 from .filemap import FileMap
 from .linemap import LineMap
+from .slotmap import SlotMap
 
 DATA = os.environ.get("RWX_DATA", "/data")
 PINNED = os.environ.get("RWX_PINNED", "/opt/sqlglot")
@@ -80,6 +81,18 @@ class Ctx:
         # children of a hot run would import the pinned tree: tests that start processes run cold only
         self.spawn = {self.lnum_at[i] for i in lm.spawn if self.lnum_at[i] is not None} | self.always
 
+        self.sm = None
+        self.state_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps", "state.json.gz")
+        try:
+            sm = SlotMap()
+            if sm.ids == lm.ids and sm.complete and os.path.exists(self.state_path):
+                self.sm = sm
+                self.snum_at = self.lnum_at
+            else:
+                log("slot map not usable: import-time edits select every importer")
+        except Exception as e:
+            log("slot map unavailable (%r): import-time edits select every importer" % (e,))
+
     def openers(self, path):
         return {self.num_at[i] for i in self.fm.openers(path) if self.num_at[i] is not None} | self.always
 
@@ -95,6 +108,9 @@ class Plan:
         self.new_files = {}     # path -> patched bytes
         self.unrun = set()      # candidates that a run in a fresh process cannot settle
         self.diffs = {}         # patched Python file -> codediff.Diff, or None if it does not compile
+        self.base = set()       # candidates that do not depend on what the import-time edits change
+        self.importers = set()  # tests that run the changed import-time code: the fallback for those edits
+        self.slots = False      # import-time edits whose effect the slot comparison can narrow down
         self.mode = "cold"
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
@@ -144,8 +160,17 @@ def classify(c, p, path, old, new):
         return None
     p.diffs[path] = d
     lines = d.lines
+    if d.import_level and c.sm is not None and path.startswith("sqlglot/"):
+        # Import-time code changed.  Whoever runs changed function code is a candidate as always; the
+        # effect of the import-time part is the set of slots it changes, known after a comparison of
+        # the two import states: until then (and if that fails) every test that runs the changed
+        # import-time lines, i.e. every importer, stands in.
+        imp, _ = c.lm.executors(path, lines - d.func_lines)
+        p.importers |= c.nums(imp)
+        p.slots = True
+        lines = d.func_lines
     cold, sess = c.lm.executors(path, lines)
-    p.notes.append("%s: lines %s" % (path, sorted(lines)[:8]))
+    p.notes.append("%s: lines %s%s" % (path, sorted(d.lines)[:8], " (import-time)" if d.import_level else ""))
     p.cand |= c.nums(cold) | c.nums(sess)
     # reached only after earlier tests of the whole suite: a run of the candidates alone proves nothing
     p.unrun |= c.nums(sess)
@@ -188,7 +213,91 @@ def plan_patch(c, pid, data):
             p.everything = why
             return p
         p.new_files[path] = new
+    p.base = set(p.cand)
+    p.cand |= p.importers
     return p
+
+
+def function_readers(c, where):
+    """Tests that run the code of a function-like slot ("file:first-last" of the pinned code)."""
+    path, _, span = where.rpartition(":")
+    lo, _, hi = span.partition("-")
+    cold, sess = c.lm.executors(path, range(int(lo), int(hi) + 1))
+    return c.nums(cold) | c.nums(sess)
+
+
+def global_readers(c, modname, name):
+    """Tests that run a line of the module's own functions that mentions the global `name`."""
+    import ast
+
+    for path in (modname.replace(".", "/") + ".py", modname.replace(".", "/") + "/__init__.py"):
+        full = os.path.join(PINNED, path)
+        if os.path.isfile(full):
+            break
+    else:
+        return None
+    with open(full, "rb") as f:
+        tree = ast.parse(f.read())
+    lines = set()
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Name) and node.id == name:
+                    lines.update(range(node.lineno, node.end_lineno + 1))
+                elif isinstance(node, (ast.Global, ast.Nonlocal)) and name in node.names:
+                    lines.update(range(fn.lineno, fn.end_lineno + 1))
+    cold, sess = c.lm.executors(path, lines)
+    return c.nums(cold) | c.nums(sess)
+
+
+MAX_CHANGED_SLOTS = 400
+
+
+def slot_readers(c, changed):
+    """Tests that can see any of the changed slots, or (None, reason) when that cannot be told."""
+    if len(changed) > MAX_CHANGED_SLOTS:
+        return None, "%d slots changed" % len(changed)
+    out = set()
+    for key, (a, b) in changed.items():
+        if key[0] == "E" or a is None or b is None or key.endswith("<structure>"):
+            return None, "%s %s" % (key.replace("\t", " "), "appears or disappears" if key[0] != "E" else "fails to import")
+        ka, kb = a[0], b[0]
+        if ka != kb or ka == "x":
+            return None, "%s holds another kind of value" % key.replace("\t", " ")
+        parts = key.split("\t")
+        if ka == "f":
+            if "@" not in a:
+                return None, "%s: code of unknown place" % key.replace("\t", " ")
+            got = function_readers(c, a.split("@", 1)[1])
+        elif parts[0] == "C":
+            got = c.sm.class_readers(key)
+            if got is None:
+                return None, "%s is not traced" % key.replace("\t", " ")
+            got = {c.snum_at[i] for i in got if c.snum_at[i] is not None}
+        else:
+            inner = global_readers(c, parts[1], parts[2])
+            if inner is None:
+                return None, "%s: no source" % key.replace("\t", " ")
+            got = inner | {c.snum_at[i] for i in c.sm.module_readers(key) if c.snum_at[i] is not None}
+        out |= got
+    return out, "%d slots" % len(changed)
+
+
+def resolve_slots(c, p, servers, slot, budget):
+    """Replace "every importer" by the readers of the slots that the import-time edits change."""
+    memo = {}
+    translate = {}
+    for d in p.diffs.values():
+        if d is not None:
+            for old, new in d.pairs:
+                translate[codediff.code_hash(new, memo)] = codediff.code_hash(old, memo)
+    changed = verify.changed_slots(servers, slot, p.new_files, translate, c.state_path, budget)
+    readers, note = slot_readers(c, changed)
+    if readers is None:
+        p.notes.append("slots: %s -> every importer" % note)
+        return
+    p.notes.append("slots: %s, %d readers instead of %d importers" % (note, len(readers), len(p.importers)))
+    p.cand = p.base | readers | c.always
 
 
 def items(c, nums):
@@ -317,6 +426,9 @@ def main():
             log("hot server failed (%r)" % (e,))
     log("planned %d patches in %.1fs, hot server %s" % (len(pids), time.monotonic() - T0, "ready" if loaded is not None else "absent"))
     for p in todo:
+        if p.slots and servers is not None:
+            plans.append(p)   # its candidates are settled by a comparison of import states first
+            continue
         try:
             decide(c, p, loaded)
         except Exception as e:
@@ -358,6 +470,19 @@ def main():
                     log("%s: out of time, %d candidates selected unrun" % (p.pid, len(p.cand)))
                     fallback(p)
                     continue
+                if p.slots:
+                    if not servers.wait("cold", slot, 60.0):
+                        raise RuntimeError("no server")
+                    try:
+                        resolve_slots(c, p, servers, slot, min(40.0, kill_at - time.monotonic()))
+                    except Exception as e:
+                        p.notes.append("slots: %r -> every importer" % (e,))
+                    decide(c, p, loaded)
+                    if not p.run:
+                        stats["listed" if p.cand else "empty"] += 1
+                        log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
+                        out.emit(p.pid, answer(c, p, p.cand))
+                        continue
                 ids = [c.id_of[n] for n in p.run]
                 recorded = {i: c.ms[c.num_of[i]] / 1000.0 for i in ids}
                 budget = min(kill_at - time.monotonic(), 30.0 + 6.0 * sum(c.ms[n] for n in p.run) / 1000.0)

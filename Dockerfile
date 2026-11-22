@@ -18,7 +18,9 @@ RUN python /tmp/fetch_sqlglot.py /opt/sqlglot \
 
 COPY selector /app/selector
 COPY maps /app/maps
-RUN python -m compileall -q /app/selector && chmod -R a+rX /app
+# the import state of the pinned commit, for comparison with a patched one (selector/state.py)
+RUN cd /app && PYTHONHASHSEED=0 PYTHONDONTWRITEBYTECODE=1 python -m selector.state /opt/sqlglot /app/maps/state.json.gz \
+ && python -m compileall -q /app/selector && chmod -R a+rX /app
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 CMD ["python", "-m", "selector"]

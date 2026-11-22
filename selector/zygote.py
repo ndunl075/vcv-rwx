@@ -134,7 +134,27 @@ def _kill(pid):
 PYTEST_ARGS = ["-p", "no:cacheprovider", "-q", "--continue-on-collection-errors"]
 
 
+def state_child(job):
+    """Import all of sqlglot from the job's patched tree and write the slots that differ from the pinned state."""
+    out = {}
+    try:
+        root = job["root"]
+        os.chdir(root)
+        sys.path.insert(0, root)
+        from . import state
+
+        snap = state.snapshot(root, job["translate"])
+        out["changed"] = {k: list(v) for k, v in state.compare(state.load(job["pinned"]), snap).items()}
+    except BaseException as e:
+        out = {"error": "%s: %s" % (type(e).__name__, e)}
+    with open(job["out"], "w") as f:
+        json.dump(out, f)
+    os._exit(0)
+
+
 def cold_child(job, verdicts):
+    if job.get("state"):
+        state_child(job)
     root = job["root"]
     os.chdir(root)
     sys.path.insert(0, root)
