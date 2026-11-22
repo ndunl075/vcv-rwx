@@ -364,7 +364,8 @@ def prove_slow(c, p):
     (path, new), = p.new_files.items()
     if p.diffs.get(path) is None:
         return
-    slow = [n for n in p.cand if c.id_of[n] in c.cmp.tests and n not in p.text_readers and n not in p.unrun]
+    # candidates reached only inside the whole-suite session (p.unrun) are covered too: the map holds the session's record
+    slow = [n for n in p.cand if c.id_of[n] in c.cmp.tests and n not in p.text_readers]
     if not slow:
         return
     swap = cmpproof.single_compare_swap(read_pinned(path), new, path)
