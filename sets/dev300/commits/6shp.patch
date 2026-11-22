@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 573d3c15d..11b563b62 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -2436,7 +2436,7 @@ class Generator:
+         data_sql = f"WITH {'NO ' if expression.args.get('no') else ''}DATA"
+         statistics = expression.args.get("statistics")
+         statistics_sql = ""
+-        if statistics is not None:
++        if statistics is None:
+             statistics_sql = f" AND {'NO ' if not statistics else ''}STATISTICS"
+         return f"{data_sql}{statistics_sql}"
+ 

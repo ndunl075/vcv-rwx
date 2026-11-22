@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+index ea2df2935..dc5fd2b0d 100644
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -4106,7 +4106,7 @@ WITH "customer_total_return" AS (
+     "customer_address"."ca_state" AS "ctr_state",
+     SUM("web_returns"."wr_return_amt") AS "ctr_total_return"
+   FROM "web_returns" AS "web_returns"
+-  JOIN "customer_address" AS "customer_address"
++  JOIN "customer_address"  "customer_address"
+     ON "customer_address"."ca_address_sk" = "web_returns"."wr_returning_addr_sk"
+   JOIN "date_dim" AS "date_dim"
+     ON "date_dim"."d_date_sk" = "web_returns"."wr_returned_date_sk"

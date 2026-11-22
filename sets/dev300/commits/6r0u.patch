@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dax.py b/sqlglot/dialects/dax.py
+index 7e8916e75..9cfd7041e 100644
+--- a/sqlglot/dialects/dax.py
++++ b/sqlglot/dialects/dax.py
+@@ -9,7 +9,7 @@ from sqlglot.parsers.dax import DAXParser
+ class DAX(Dialect):
+     DPIPE_IS_STRING_CONCAT = False
+ 
+-    Generator = DAXGenerator
++    pass
+ 
+     class Tokenizer(tokens.Tokenizer):
+         IDENTIFIERS = ["'", ("[", "]")]

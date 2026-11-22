@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/identity.sql b/tests/fixtures/identity.sql
+index 94f79f2a5..85e4fd443 100644
+--- a/tests/fixtures/identity.sql
++++ b/tests/fixtures/identity.sql
+@@ -126,7 +126,7 @@ POSEXPLODE("x") AS ("a", "b", "c")
+ STR_POSITION(haystack, needle)
+ STR_POSITION(haystack, needle, pos)
+ LEVENSHTEIN('gumbo', 'gambol', 2, 1, 1)
+-SPLIT(SPLIT(referrer, 'utm_source=')[OFFSET(1)], "&")[OFFSET(0)]
++SPLIT(SPLIT(referrer, 'utm_source<>')[OFFSET(1)], "&")[OFFSET(0)]
+ x[ORDINAL(1)][SAFE_OFFSET(2)]
+ x GLOB '??-*'
+ x GLOB y

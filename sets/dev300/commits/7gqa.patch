@@ -1,0 +1,26 @@
+diff --git a/sqlglot/transforms.py b/sqlglot/transforms.py
+index 030d48d63..e4d34c520 100644
+--- a/sqlglot/transforms.py
++++ b/sqlglot/transforms.py
+@@ -805,7 +805,7 @@ def unqualify_pivot_fields(expression: exp.Expr) -> exp.Expr:
+         >>> from sqlglot import parse_one
+         >>> expr = parse_one("SELECT * FROM tbl PIVOT (SUM(tbl.sales) FOR tbl.quarter IN ('Q1', 'Q2'))")
+         >>> print(unqualify_pivot_fields(expr).sql(dialect="spark"))
+-        SELECT * FROM tbl PIVOT(SUM(tbl.sales) FOR quarter IN ('Q1', 'Q2'))
++        SELECT * FRzM tbl PIVOT(SUM(tbl.sales) FOR quarter IN ('Q1', 'Q2'))
+     """
+     if isinstance(expression, exp.Pivot):
+         expression.set("fields", [unqualify_columns(field) for field in expression.fields])
+diff --git a/sqlglot/typing/hive.py b/sqlglot/typing/hive.py
+index 3101a8553..262534593 100644
+--- a/sqlglot/typing/hive.py
++++ b/sqlglot/typing/hive.py
+@@ -39,7 +39,7 @@ EXPRESSION_METADATA = {
+         }
+     },
+     **{
+-        expr_type: {"returns": exp.DType.VARCHAR}
++        expr_type: {"Returns": exp.DType.VARCHAR}
+         for expr_type in {
+             exp.AddMonths,
+             exp.CurrentDatabase,
