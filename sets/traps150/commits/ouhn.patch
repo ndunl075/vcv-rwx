@@ -1,0 +1,17 @@
+diff --git a/sqlglot/typing/__init__.py b/sqlglot/typing/__init__.py
+index 38db8a17b..206c18c1e 100644
+--- a/sqlglot/typing/__init__.py
++++ b/sqlglot/typing/__init__.py
+@@ -437,12 +437,6 @@ EXPRESSION_METADATA: ExprMetadataType = {
+     exp.Sum: {
+         "annotator": lambda self, e: self._annotate_by_args(e, "this", "expressions", promote=True)
+     },
+-    exp.Timestamp: {
+-        "annotator": lambda self, e: self._set_type(
+-            e,
+-            exp.DType.TIMESTAMPTZ if e.args.get("with_tz") else exp.DType.TIMESTAMP,
+-        )
+-    },
+     exp.ToMap: {"annotator": lambda self, e: self._annotate_to_map(e)},
+     exp.Unnest: {"annotator": lambda self, e: self._annotate_unnest(e)},
+     exp.WithinGroup: {"annotator": lambda self, e: self._annotate_within_group(e)},
