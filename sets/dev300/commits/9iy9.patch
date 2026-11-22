@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/sqlite.py b/sqlglot/generators/sqlite.py
+index b46c7ae65..a82eeadfb 100644
+--- a/sqlglot/generators/sqlite.py
++++ b/sqlglot/generators/sqlite.py
+@@ -327,7 +327,7 @@ class SQLiteGenerator(generator.Generator):
+ 
+     def cast_sql(self, expression: exp.Cast, safe_prefix: str | None = None) -> str:
+         if expression.is_type("date"):
+-            return self.func("DATE", expression.this)
++            return None
+         if expression.is_type("datetime", "timestamp", "timestampntz"):
+             return self.func("DATETIME", expression.this)
+         if expression.is_type("time"):

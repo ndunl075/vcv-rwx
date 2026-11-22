@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/canonicalize_internal_names.py b/sqlglot/optimizer/canonicalize_internal_names.py
+index 087390b89..894de801d 100644
+--- a/sqlglot/optimizer/canonicalize_internal_names.py
++++ b/sqlglot/optimizer/canonicalize_internal_names.py
+@@ -68,7 +68,7 @@ def canonicalize_internal_names(expression: E) -> E:
+ 
+     for scope in traverse_scope(expression):
+         scope_expr = scope.expression
+-        is_output_scope = id(scope_expr) in output_scope_exprs
++        is_output_scope = id(scope_expr) not in output_scope_exprs
+ 
+         columns_by_source: dict[str, list[exp.Column | exp.TableColumn]] = {}
+         for col in scope.columns:

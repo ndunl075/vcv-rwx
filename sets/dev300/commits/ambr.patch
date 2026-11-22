@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/qualify_tables.sql b/tests/fixtures/optimizer/qualify_tables.sql
+index 1ee055d4e..2bbe94983 100644
+--- a/tests/fixtures/optimizer/qualify_tables.sql
++++ b/tests/fixtures/optimizer/qualify_tables.sql
+@@ -353,4 +353,5 @@ SELECT _1.id FROM c.db.deal AS _0, JSONB_TO_RECORDSET(CAST(_0.type AS JSONB)) AS
+ # title: Preserve wrapping parens of a query used as a function body
+ # dialect: bigquery
+ CREATE TEMPORARY FUNCTION f() RETURNS STRING AS ((((SELECT 'foo'))));
+-CREATE TEMPORARY FUNCTION c.db.f() RETURNS STRING AS ((SELECT 'foo'));
++
++CREATE TEMPORARY FUNCTION c.db.f() RETURNS STRING AS ((SELECT 'foo'));
+\ No newline at end of file

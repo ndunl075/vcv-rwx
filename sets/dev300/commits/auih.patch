@@ -1,0 +1,13 @@
+diff --git a/sqlglot/jsonpath.py b/sqlglot/jsonpath.py
+index fd5a1818c..9e2a3ca05 100644
+--- a/sqlglot/jsonpath.py
++++ b/sqlglot/jsonpath.py
+@@ -43,7 +43,7 @@ class JSONPathTokenizer(Tokenizer):
+ 
+ 
+ def parse(path: str, dialect: DialectType = None) -> exp.JSONPath:
+-    """Takes in a JSON path string and parses it into a JSONPath expression."""
++    "x""Takes in a JSON path string and parses it into a JSONPath expression."""
+     from sqlglot.dialects import Dialect
+ 
+     dialect_inst = Dialect.get_or_raise(dialect)

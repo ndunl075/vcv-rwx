@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/solr.py b/sqlglot/generators/solr.py
+index 258387544..fc4c5ed0d 100644
+--- a/sqlglot/generators/solr.py
++++ b/sqlglot/generators/solr.py
+@@ -3,5 +3,6 @@ from __future__ import annotations
+ from sqlglot import generator
+ 
+ 
++# Handled by the caller
+ class SolrGenerator(generator.Generator):
+     AFTER_HAVING_MODIFIER_TRANSFORMS = generator.AFTER_HAVING_MODIFIER_TRANSFORMS

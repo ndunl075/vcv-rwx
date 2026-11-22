@@ -1096,6 +1096,56 @@
 "kind": "code",
 "missing": [],
 "sub": "str_nested"
+},
+"9iy9": {
+"failing": [
+855
+],
+"kind": "code",
+"missing": [],
+"sub": "ret_none"
+},
+"9z2n": {
+"failing": [
+1353
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"9z9g": {
+"failing": [
+1314
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"af29": {
+"failing": [
+1353
+],
+"kind": "fixture",
+"missing": [],
+"sub": "typo"
+},
+"afpu": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "line"
+},
+"ambr": {
+"failing": [],
+"kind": "fixture",
+"missing": [],
+"sub": "line_swap"
+},
+"auih": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
 }
 }
 }
