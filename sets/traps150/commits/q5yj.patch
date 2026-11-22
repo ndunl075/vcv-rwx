@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/simplify.sql b/tests/fixtures/optimizer/simplify.sql
+index c4e831354..44f74505e 100644
+--- a/tests/fixtures/optimizer/simplify.sql
++++ b/tests/fixtures/optimizer/simplify.sql
+@@ -2068,6 +2068,7 @@ STARTS_WITH('x', y);
+ 
+ STARTS_WITH(x, 'y');
+ STARTS_WITH(x, 'y');
++-- type: ignore
+ 
+ --------------------------------------
+ -- Simplify NOT

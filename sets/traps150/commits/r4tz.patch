@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/postgres.py b/sqlglot/generators/postgres.py
+index 1db4172cd..accffbe9c 100644
+--- a/sqlglot/generators/postgres.py
++++ b/sqlglot/generators/postgres.py
+@@ -309,7 +309,6 @@ class PostgresGenerator(generator.Generator):
+     SUPPORTED_JSON_PATH_PARTS = {
+         exp.JSONPathKey,
+         exp.JSONPathRoot,
+-        exp.JSONPathSubscript,
+     }
+ 
+     def lateral_sql(self, expression: exp.Lateral) -> str:

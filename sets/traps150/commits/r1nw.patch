@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/qualify.py b/sqlglot/optimizer/qualify.py
+index 60e2255d8..9fbf652e0 100644
+--- a/sqlglot/optimizer/qualify.py
++++ b/sqlglot/optimizer/qualify.py
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-import typing as t
++ import typing as t
+ 
+ from sqlglot import exp
+ from sqlglot.dialects.dialect import Dialect, DialectType
