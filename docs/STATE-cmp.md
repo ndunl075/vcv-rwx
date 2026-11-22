@@ -51,9 +51,10 @@ values is not stable), mixed int/str ordering, ordering on anything but int/str/
 
 * Kit sample (native arm64 image): 223.689 -> 173.448 simulated, CPU 6.18 -> 5.44 s, 0 misses both; 2haz, 66ks, 2qn5 cost 0.
   No patch costs more than at 99dc0ff. dev300 labeled subset (58 patches): 659.414 both, 0 misses both (no function-body comparison swap
-  among them: the proof is inactive there).
+  among them: the proof is inactive there). Update: with 74 labeled patches both heads score 3797.983 with 10 misses, the same patches
+  at 99dc0ff (labels such as a comment-only change failing test_max_nodes look like load noise in the labeling); the proof fired on none.
 * `tools/cmpmap/validate.py`: real whole-suite runs of swapped comparisons chosen from the map (full, partial and no proof);
-  no failing test was ever claimed as running as before.
+  7 swaps run to the end (claims 1309-1620 tests, or 0), no failing test was claimed as running as before. Weak evidence: none of the swaps broke a test.
 * The map covers all 1620 tests (all profiled cleanly), 62 KB.
 
 ## Build facts
