@@ -22,7 +22,10 @@ T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
 HEAVY_MS = 2500        # a test this slow is never run here
-RUN_START_S = {"hot": 0.5, "cold": 3.0}   # fixed CPU of one run in a child of the warm servers (board seconds)
+# fixed CPU of one run in a child of the warm servers (board seconds).  Measured natively on 13 hot runs of the labeled set:
+# 0.85 s of CPU per run on average (0.05 to 4.2; fork, pytest's own start, reports of failures), charged 2-4 times that
+RUN_START_S = {"hot": 2.0, "cold": 3.0}
+SERVER_S = 3.0         # CPU of starting the warm servers (about 1 s natively): no run when all runs together save less
 RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
@@ -121,6 +124,7 @@ class Plan:
         self.text_readers = set()  # tests that read a patched Python file as data
         self.fixture = False    # a fixture file changed: its readers are selected, not run
         self.mode = "cold"
+        self.saves = 0.0        # board seconds that running instead of listing saves (when it runs)
         self.est = None         # board seconds of the cheaper way to settle the candidates (list or run), set by decide
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
@@ -474,6 +478,7 @@ def decide(c, p, loaded):
         p.est = min(list_cost, run_cost)
         if run_cost + RUN_MARGIN_S < list_cost:
             p.listed, p.run = listed, rest
+            p.saves = list_cost - run_cost
             return
     p.listed, p.run = cand, []
 
@@ -619,6 +624,15 @@ def main():
         else:
             plans.append(p)
     servers = None
+    if plans and sum(p.saves for p in plans) < SERVER_S:
+        # the warm servers cost more than all the runs together save: list every candidate
+        log("runs save %.1f s in all, less than starting the servers (%.1f s): no runs" % (sum(p.saves for p in plans), SERVER_S))
+        for p in plans:
+            p.listed, p.run = sorted(p.cand), []
+            stats["listed"] += 1
+            log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
+            out.emit(p.pid, answer(c, p, p.cand))
+        plans = []
     if plans:
         hot_files, may_run = [], set()
         for p in plans:
