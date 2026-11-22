@@ -23,7 +23,7 @@ WORK = os.environ.get("RWX_WORK", "/work")
 OUT = os.path.join(WORK, os.environ.get("RWX_MAPS", "maps"))
 COLLECT = os.path.join(WORK, "tools", "collect")
 SRC = [ROOT + "/sqlglot", ROOT + "/tests", ROOT + "/sqlglotc"]
-TIMEOUT = float(os.environ.get("RWX_TIMEOUT", "600"))
+TIMEOUT = float(os.environ.get("RWX_TIMEOUT", "3000"))
 
 os.environ["SKIP_INTEGRATION"] = "0"
 sys.path.insert(0, os.path.join(WORK))
@@ -91,6 +91,14 @@ def child(nodeid, wfd):
         result["crash"] = repr(e)
         failed.append(True)
     cpu = time.process_time() - t0
+    # pool workers write their trace at exit: wait for them before collecting
+    import multiprocessing
+
+    for proc in multiprocessing.active_children():
+        proc.join(30)
+    end = time.time() + 5
+    while time.time() < end and not os.listdir(tmp):
+        time.sleep(0.1)
     tr.stop()
     own = tr.dump()
     lines = {}
@@ -173,7 +181,11 @@ def main():
     only = os.environ.get("RWX_ONLY")
     if only:
         ids = [i for i in ids if only in i]
-    jobs = int(os.environ.get("RWX_JOBS", "4"))
+    idsf = os.environ.get("RWX_IDS_FILE")
+    if idsf:
+        want = set(open(idsf).read().split())
+        ids = [i for i in ids if i in want]
+    jobs = int(os.environ.get("RWX_JOBS", "2"))
     # warm imports shared by every fork: third-party libraries the tests import
     import unittest  # noqa
     for m in ("numpy", "pandas", "duckdb", "pytz", "dateutil"):
@@ -181,17 +193,24 @@ def main():
             __import__(m)
         except Exception:
             pass
+    from concurrent.futures import ThreadPoolExecutor
+
     results = {}
     t0 = time.time()
-    # heaviest first for a better schedule
-    order = sorted(ids, key=lambda i: -hash(i) % 7)
-    with multiprocessing.get_context("fork").Pool(jobs) as pool:
-        for n, (nid, res) in enumerate(pool.imap_unordered(cold, ids, chunksize=1)):
-            results[nid] = res
-            if n % 50 == 0:
-                print(f"{n}/{len(ids)} {time.time()-t0:.0f}s", file=sys.stderr, flush=True)
+    # threads only supervise: every test runs in its own forked process (which may itself spawn pools)
+    if jobs == 1:  # plain loop, no threads at all around fork()
+        for n, nid in enumerate(ids):
+            results[nid] = cold(nid)[1]
+            print(f"{n+1}/{len(ids)} {time.time()-t0:.0f}s {nid}", file=sys.stderr, flush=True)
+    else:
+        with ThreadPoolExecutor(jobs) as ex:
+            for n, (nid, res) in enumerate(ex.map(cold, ids)):
+                results[nid] = res
+                if n % 50 == 0:
+                    print(f"{n}/{len(ids)} {time.time()-t0:.0f}s", file=sys.stderr, flush=True)
     os.makedirs(OUT, exist_ok=True)
-    with gzip.open(os.path.join(WORK, ".work", "cold_raw.json.gz"), "wt") as f:
+    name = os.environ.get("RWX_RAW", "cold_raw.json.gz")
+    with gzip.open(os.path.join(WORK, ".work", name), "wt") as f:
         json.dump(results, f)
     print("raw saved", file=sys.stderr)
 

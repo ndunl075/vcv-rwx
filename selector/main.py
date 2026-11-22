@@ -16,6 +16,7 @@ LIB_IMPORT_S = {"numpy": 0.12, "pandas": 0.45, "duckdb": 0.10}
 P_FAIL = 0.5              # prior that a candidate set holds a failing test (only used for the choice)
 FAIL_COST_S = 2.0         # extra cost when something fails and must be selected
 VERIFY_MARGIN_S = 0.3
+VERIFY = os.environ.get("RWX_VERIFY", "0") == "1"  # running candidates is off until the image carries the test dependencies
 BATCH_BUDGET_S = 200.0    # stop verifying after this much wall time and just select
 VERIFY_DEADLINE_MIN_S = 20.0
 
@@ -111,6 +112,7 @@ def process(c, patch_id, data, t_start, stats):
     if pl.everything:
         stats["everything"] += 1
         return select_all(c)
+    c.last_related = nums_of(c, pl.related)
     cand = nums_of(c, pl.mask) + [n for n in c.unmapped]
     if not cand:
         stats["empty_static"] += 1
@@ -121,7 +123,7 @@ def process(c, patch_id, data, t_start, stats):
             unsafe.add(c.idx_num[i])
     do_verify, W, U = decide(c, cand, unsafe)
     final = list(cand)
-    if do_verify and time.time() - t_start < BATCH_BUDGET_S:
+    if VERIFY and do_verify and not pl.cannot_run and time.time() - t_start < BATCH_BUDGET_S:
         stats["verified"] += 1
         ids = [m.ids[i] for i in range(m.n) if c.idx_num[i] in set(W)]
         warm = [lib for lib, mk in c.libs.items() if mk & pl.mask]
@@ -168,7 +170,7 @@ def main():
             else:
                 items = [(n, c.ms[n]) for n in nums]
                 cost, bins = pack.pack(items)
-                bins = fill(c, bins, nums)
+                bins = fill(c, bins, nums, getattr(c, 'last_related', ()))
         except Exception as e:
             log("error on %s: %r -> selecting everything" % (pid, e))
             stats["errors"] += 1
@@ -181,13 +183,22 @@ def main():
     return 0
 
 
-def fill(c, bins, nums):
-    """Free insurance: idle time of already paid-for workers takes the next most plausible tests."""
+def fill(c, bins, nums, related_nums=()):
+    """Free insurance: idle time of already paid-for workers takes the next most plausible tests.
+
+    Tiers: tests touching the changed files, then tests of the same test files as the selection,
+    then everything else; cheapest first inside a tier so that the most tests fit.
+    """
     if len(bins) < 2:
         return bins
-    have = {n for n, _ in (x for b in bins for x in b)}
-    # plausibility: tests of the same files as the selected ones, cheapest first
+    have = {n for b in bins for n, _ in b}
     files = {c.tests[n]["file"] for n in have}
-    extra = [(t["number"], c.ms[t["number"]]) for t in c.tests if t["file"] in files and t["number"] not in have]
-    extra.sort(key=lambda x: x[1])
+    rel = set(related_nums)
+    tier1 = [n for n in c.all_nums if n in rel and n not in have]
+    tier2 = [t["number"] for t in c.tests if t["file"] in files and t["number"] not in have and t["number"] not in rel]
+    seen = set(tier1) | set(tier2) | have
+    tier3 = [n for n in c.all_nums if n not in seen]
+    extra = []
+    for tier in (tier1, tier2, tier3):
+        extra.extend(sorted(((n, c.ms[n]) for n in tier), key=lambda x: x[1]))
     return pack.fill_free(bins, extra)

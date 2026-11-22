@@ -43,12 +43,18 @@ class _Result(unittest.TestResult):
             if not any(k in self.failed for k in self.wanted):
                 self.failed.update(self.wanted)
 
+    def _debug(self, test, err):
+        if os.environ.get("RWX_DEBUG"):
+            sys.stderr.write("FAIL %s\n%s\n" % (test, self._exc_info_to_string(err, test)))
+
     def addError(self, test, err):
         super().addError(test, err)
+        self._debug(test, err)
         self._fail(test)
 
     def addFailure(self, test, err):
         super().addFailure(test, err)
+        self._debug(test, err)
         self._fail(test)
 
     def addUnexpectedSuccess(self, test):

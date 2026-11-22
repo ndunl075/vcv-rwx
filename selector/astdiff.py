@@ -142,7 +142,7 @@ class _Walker:
             return
         if isinstance(o, _FUNCS):
             # header (name, args incl. defaults, decorators, returns) must be equal: else import-level
-            hdr = lambda f: (f.name, _dump(f.args), [_dump(d) for d in f.decorator_list], _dump(f.returns) if f.returns else None)
+            hdr = lambda f: (f.name, _dump(f.args), [_dump(d) for d in f.decorator_list], _dump(f.returns) if f.returns else None, [_dump(x) for x in getattr(f, 'type_params', [])])
             if hdr(o) != hdr(n):
                 if ctx is None:
                     self.eff.import_level = True
@@ -155,7 +155,7 @@ class _Walker:
             self.walk_stmt_lists(o.body, n.body, fctx, _stmts_span(o.body), False)
             return
         if isinstance(o, ast.ClassDef):
-            hdr = lambda c: (c.name, [_dump(b) for b in c.bases], [_dump(k) for k in c.keywords], [_dump(d) for d in c.decorator_list])
+            hdr = lambda c: (c.name, [_dump(b) for b in c.bases], [_dump(k) for k in c.keywords], [_dump(d) for d in c.decorator_list], [_dump(x) for x in getattr(c, 'type_params', [])])
             if hdr(o) != hdr(n):
                 return self.mismatch(o, ctx)
             if ctx is None:

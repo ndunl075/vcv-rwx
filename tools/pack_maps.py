@@ -20,6 +20,9 @@ ROOT = os.path.dirname(HERE)
 
 def main():
     raw = json.load(gzip.open(os.path.join(ROOT, ".work", "cold_raw.json.gz"), "rt"))
+    fix = os.path.join(ROOT, ".work", "cold_fix.json.gz")
+    if os.path.exists(fix):
+        raw.update(json.load(gzip.open(fix, "rt")))
     ids = [t["id"] for t in json.load(open(os.path.join(ROOT, "kit", "sample", "tests.json")))["tests"]]
     idx = {i: n for n, i in enumerate(ids)}
     sets = []

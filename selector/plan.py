@@ -28,7 +28,8 @@ class Plan:
         self.changes = []
         self.new_files = {}  # path -> bytes (None = deleted)
         self.notes = []
-        self.text_only_shift = []  # (path) files with a comment-only change that moves line numbers
+        self.cannot_run = False  # the patched tree cannot be rebuilt faithfully (binary, mode change)
+        self.related = 0  # broader than mask: tests that touch the changed files at all (free insurance)
 
     def note(self, s):
         self.notes.append(s)
@@ -88,6 +89,11 @@ def _plan_change(pl, c, maps, read_old, suspects_mask):
         pl.note("symlink %s" % path)
         return
     mask = 0
+    if c.old_mode and c.new_mode and c.old_mode != c.new_mode:
+        pl.cannot_run = True
+    for p in (old_path, new_path):
+        if p:
+            pl.related |= m.file_mask(p) | m.readers_mask(p) | m.listers_mask(os.path.dirname(p) or ".")
     # structural: files created, removed, moved
     if c.kind in ("add", "rename", "copy", "delete"):
         for p in (old_path, new_path):
@@ -118,6 +124,7 @@ def _plan_change(pl, c, maps, read_old, suspects_mask):
             pl.note("copy %s" % path)
             return
     if c.binary:
+        pl.cannot_run = True
         for p in (old_path, new_path):
             if p:
                 mask |= m.readers_mask(p)
@@ -128,6 +135,7 @@ def _plan_change(pl, c, maps, read_old, suspects_mask):
         pl.mask |= mask
         return
     if c.kind == "mode":
+        pl.cannot_run = True
         mask |= m.readers_mask(path)
         pl.mask |= mask
         return
