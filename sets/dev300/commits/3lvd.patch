@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/qualify_tables.sql b/tests/fixtures/optimizer/qualify_tables.sql
+index 1ee055d4e..128740400 100644
+--- a/tests/fixtures/optimizer/qualify_tables.sql
++++ b/tests/fixtures/optimizer/qualify_tables.sql
+@@ -95,7 +95,7 @@ SELECT * FROM (t1 CROSS JOIN t2) AS t;
+ SELECT * FROM (SELECT * FROM c.db.t1 AS t1 CROSS JOIN c.db.t2 AS t2) AS t;
+ 
+ # title: chained wrapped joins without aliases (1)
+-SELECT * FROM ((a CROSS JOIN b) CROSS JOIN c);
++SELECT DISTINCT * FROM ((a CROSS JOIN b) CROSS JOIN c);
+ SELECT * FROM ((c.db.a AS a CROSS JOIN c.db.b AS b) CROSS JOIN c.db.c AS c);
+ 
+ # title: chained wrapped joins without aliases (2)

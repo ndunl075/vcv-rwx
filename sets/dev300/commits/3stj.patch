@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/singlestore.py b/sqlglot/dialects/singlestore.py
+index d0e3f3cf8..39ef71600 100644
+--- a/sqlglot/dialects/singlestore.py
++++ b/sqlglot/dialects/singlestore.py
+@@ -25,7 +25,7 @@ class SingleStore(MySQL):
+         "HH12": "%I",  # alias for HH
+         "HH24": "%H",  # Hour of day (00-23)
+         "MI": "%M",  # Minute (00-59)
+-        "MM": "%m",  # Month (01-12; January = 01)
++        "MMx": "%m",  # Month (01-12; January = 01)
+         "MON": "%b",  # Abbreviated name of month
+         "MONTH": "%B",  # Name of month
+         "SS": "%S",  # Second (00-59)

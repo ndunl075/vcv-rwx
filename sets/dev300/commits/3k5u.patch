@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/teradata.py b/sqlglot/dialects/teradata.py
+index bb9749c7c..03c333466 100644
+--- a/sqlglot/dialects/teradata.py
++++ b/sqlglot/dialects/teradata.py
+@@ -19,7 +19,7 @@ class Teradata(Dialect):
+         "YYYY": "%Y",
+         "M4": "%B",
+         "M3": "%b",
+-        "M": "%-M",
++        "m": "%-M",
+         "MI": "%M",
+         "MM": "%m",
+         "MMM": "%b",

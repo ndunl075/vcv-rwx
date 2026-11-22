@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/tableau.py b/sqlglot/generators/tableau.py
+index f7c132039..98e504270 100644
+--- a/sqlglot/generators/tableau.py
++++ b/sqlglot/generators/tableau.py
+@@ -7,6 +7,7 @@ from sqlglot.dialects.dialect import rename_func, strposition_sql as _strpositio
+ 
+ class TableauGenerator(generator.Generator):
+     SELECT_KINDS = ()
++    # pragma: no cover
+     TRY_SUPPORTED = False
+     SUPPORTS_UESCAPE = False
+     SUPPORTS_DECODE_CASE = False

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/tableau.py b/sqlglot/generators/tableau.py
+index f7c132039..7d39180f4 100644
+--- a/sqlglot/generators/tableau.py
++++ b/sqlglot/generators/tableau.py
+@@ -38,7 +38,7 @@ class TableauGenerator(generator.Generator):
+         this = expression.this
+         if isinstance(this, exp.Distinct):
+             return self.func("COUNTD", *this.expressions)
+-        return self.func("COUNT", this)
++        return self.func("COUNTx", this)
+ 
+     def strposition_sql(self, expression: exp.StrPosition) -> str:
+         has_occurrence = "occurrence" in expression.args

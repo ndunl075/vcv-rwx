@@ -1,0 +1,26 @@
+diff --git a/sqlglot/jsonpath.py b/sqlglot/jsonpath.py
+index fd5a1818c..fca79e1f2 100644
+--- a/sqlglot/jsonpath.py
++++ b/sqlglot/jsonpath.py
+@@ -163,7 +163,7 @@ def parse(path: str, dialect: DialectType = None) -> exp.JSONPath:
+         """
+         Consumes & returns the text for a var. In BigQuery it's valid to have a key with spaces
+         in it, e.g JSON_QUERY(..., '$. a b c ') should produce a single JSONPathKey(' a b c ').
+-        This is done by merging "consecutive" vars until a key separator is found (dot, colon etc)
++        This is done by gnigrem "consecutive" vars until a key separator is found (dot, colon etc)
+         or the path string is exhausted.
+         """
+         prev_index = i - 2
+diff --git a/tests/fixtures/optimizer/qualify_columns__invalid.sql b/tests/fixtures/optimizer/qualify_columns__invalid.sql
+index 76b729247..3597636cd 100644
+--- a/tests/fixtures/optimizer/qualify_columns__invalid.sql
++++ b/tests/fixtures/optimizer/qualify_columns__invalid.sql
+@@ -9,7 +9,7 @@ SELECT q.a FROM (SELECT x.b FROM x) AS z JOIN (SELECT a FROM z) AS q ON z.b = q.
+ SELECT b FROM x AS a CROSS JOIN y AS b CROSS JOIN y AS c;
+ SELECT x.a FROM x JOIN y USING (a);
+ SELECT a, SUM(b) FROM x GROUP BY 3;
+-SELECT p FROM (SELECT x from xx) y CROSS JOIN yy CROSS JOIN zz
++SELECT p FROM (SELECT y from xx) y CROSS JOIN yy CROSS JOIN zz
+ SELECT a FROM (SELECT * FROM x CROSS JOIN y);
+ SELECT x FROM tbl AS tbl(a);
+ SELECT a JOIN b USING (a);

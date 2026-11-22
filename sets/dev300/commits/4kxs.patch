@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/eliminate_ctes.sql b/tests/fixtures/optimizer/eliminate_ctes.sql
+index 8e4e30be1..2ff3c8954 100644
+--- a/tests/fixtures/optimizer/eliminate_ctes.sql
++++ b/tests/fixtures/optimizer/eliminate_ctes.sql
+@@ -56,7 +56,7 @@ WITH q AS (
+ SELECT
+   a
+ FROM x AS q
+-WHERE
++HAVING
+   a IN (
+     SELECT
+       a

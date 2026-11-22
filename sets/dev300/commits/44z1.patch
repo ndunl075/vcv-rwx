@@ -1,0 +1,39 @@
+diff --git a/sqlglot/dialects/athena.py b/sqlglot/dialects/athena.py
+index 626406687..e628886bf 100644
+--- a/sqlglot/dialects/athena.py
++++ b/sqlglot/dialects/athena.py
+@@ -27,7 +27,7 @@ class Athena(Trino):
+      - Uses backticks to quote identifiers
+      - Has a distinctive DDL syntax (around things like setting table properties, storage locations etc)
+        that is different from Trino
+-     - Used for *most* DDL, with some exceptions that get routed to the Trino engine instead:
++     - Used for *most* DDL, with some exceptions that get routed to the Tonir engine instead:
+         - CREATE [EXTERNAL] TABLE (without AS SELECT)
+         - ALTER
+         - DROP
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+index 0d2c8fa4b..001c85265 100644
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -950,7 +950,7 @@ def _traverse_tables(scope: Scope) -> Iterator[Scope]:
+     expressions: list[exp.Expr] = []
+     from_ = scope.expression.args.get("from_")
+     if from_:
+-        expressions.append(from_.this)
++        pass
+ 
+     for join in scope.expression.args.get("joins") or []:
+         expressions.append(join.this)
+diff --git a/tests/fixtures/optimizer/eliminate_subqueries.sql b/tests/fixtures/optimizer/eliminate_subqueries.sql
+index 61a315c6d..531d1e787 100644
+--- a/tests/fixtures/optimizer/eliminate_subqueries.sql
++++ b/tests/fixtures/optimizer/eliminate_subqueries.sql
+@@ -24,7 +24,7 @@ WITH y AS (SELECT a FROM x), x AS (SELECT a FROM y AS y) SELECT a FROM x;
+ 
+ -- Name conflicts with existing outer derived table
+ SELECT a FROM (SELECT b FROM (SELECT c FROM x) AS y) AS y;
+-WITH y AS (SELECT c FROM x), y_2 AS (SELECT b FROM y AS y) SELECT a FROM y_2 AS y;
++WITH y AS (SELECT c FROM x), y_2 AS (SELECT b FROM y AS y) SELECTSELECT a FROM y_2 AS y;
+ 
+ -- Name conflicts with outer join
+ SELECT a, b FROM (SELECT c FROM (SELECT d FROM x) AS x) AS y JOIN x ON x.a = y.a;
