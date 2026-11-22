@@ -1,18 +1,20 @@
 # RWX Blast Radius: benchmark report
 
-Generated 2026-11-22 04:17:57. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
+Generated 2026-11-22 04:19:11. Total = simulated + CPU seconds (CPU from the container's cgroup, Rosetta-inflated), one run per cell unless noted. Misses cost 300 s each and are already inside the simulated column.
 
 Patches per set: sample 30
 
 | # | entry | sample total | sample miss | dev300 total | dev300 miss | hold300 total | hold300 miss | odd200 total | odd200 miss | traps150 misses by sub-kind |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | starter | 1211.9 | 0 |  |  |  |  |  |  |  |
-| 2 | jason-scheffel__nap-time | rejected: build_timeout | rejected: build_timeout |  |  |  |  |  |  |  |
+| 1 | ours-d981f91 | 143.7 | 0 |  |  |  |  |  |  |  |
+| 2 | starter | 1211.9 | 0 |  |  |  |  |  |  |  |
+| 3 | jason-scheffel__nap-time | rejected: build_timeout | rejected: build_timeout |  |  |  |  |  |  |  |
 
 ## sample
 
 | entry | total | simulated | CPU | misses | misses by kind | over-selection (avg tests selected per kind) |
 |---|---|---|---|---|---|---|
+| ours-d981f91 | 143.7 | 122.5 | 21.2 | 0 | - | code 159, comment 0, fixture 1, multi 40 |
 | starter | 1211.9 | 1210.5 | 1.4 | 0 | - | code 1620, comment 1620, fixture 1620, multi 1620 |
 | jason-scheffel__nap-time | rejected: build_timeout | | | | | |
 
