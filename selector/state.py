@@ -49,11 +49,7 @@ class Snap:
 
     @staticmethod
     def hexdigest(parts):
-        h = hashlib.blake2b(digest_size=10)
-        for p in parts:
-            h.update(p.encode("utf-8", "backslashreplace"))
-            h.update(b"\0")
-        return h.hexdigest()
+        return hashlib.blake2b("\0".join(parts).encode("utf-8", "backslashreplace"), digest_size=10).hexdigest()
 
     def digest(self, *parts):
         """Digest of strings and fingerprint pairs."""

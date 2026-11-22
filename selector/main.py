@@ -121,6 +121,7 @@ class Plan:
         self.text_readers = set()  # tests that read a patched Python file as data
         self.fixture = False    # a fixture file changed: its readers are selected, not run
         self.mode = "cold"
+        self.est = None         # board seconds of the cheaper way to settle the candidates (list or run), set by decide
         self.listed = []        # candidates selected without running
         self.run = []           # candidates to run
         self.notes = []
@@ -303,6 +304,7 @@ def global_readers(c, modname, name):
 
 
 MAX_CHANGED_SLOTS = 400
+SLOT_COMPARE_S = 2.0   # CPU seconds of one comparison of import states: no comparison when every importer settles for less
 
 
 def slot_readers(c, changed):
@@ -437,6 +439,7 @@ def decide(c, p, loaded):
     """Split the candidates into `listed` (selected unrun) and `run`."""
     prove_slow(c, p)
     cand = sorted(p.cand)
+    p.est = pack.cost_of(items(c, cand)) / 1000.0
     p.mode = "hot" if hot_ok(c, p, loaded) else "cold"
     unrun = [n for n in cand if n not in c.runnable or n in p.unrun]
     rest = [n for n in cand if n in c.runnable and n not in p.unrun]
@@ -455,10 +458,24 @@ def decide(c, p, loaded):
                     + (EXECUTOR_SETUP_S if any(c.file_of[n] == "tests/test_executor.py" for n in rest) else 0.0)
                     + pack.cost_of(items(c, listed)) / 1000.0 + (RUN_LEFTOVER_S if not listed else 0.0))
         p.notes.append("list %.1f run %.1f (%s)" % (list_cost, run_cost, p.mode))
+        p.est = min(list_cost, run_cost)
         if run_cost + RUN_MARGIN_S < list_cost:
             p.listed, p.run = listed, rest
             return
     p.listed, p.run = cand, []
+
+
+def estimate(c, p, loaded):
+    """Board seconds that settling the candidates of `p` as they stand costs (decide on a copy of the plan)."""
+    import copy
+
+    q = copy.copy(p)
+    q.cand, q.base, q.unrun, q.notes, q.new_files = set(p.cand), set(p.base), set(p.unrun), [], p.new_files
+    try:
+        decide(c, q, loaded)
+    except Exception:
+        return float("inf")
+    return q.est
 
 
 def fill(c, bins, cand):
@@ -530,7 +547,16 @@ def main():
     # patches with import-time edits: their candidates are the readers of the slots that the edits change,
     # known after a comparison of the two import states (in fresh processes, before any server starts, so
     # that the hot server can still be started for what turns out to be needed)
-    slot_plans = [p for p in todo if p.slots]
+    loaded = c.lm.loaded if c.lm is not None and c.lm.loaded else None
+    slot_plans = []
+    for p in todo:
+        if not p.slots:
+            continue
+        est = estimate(c, p, loaded)
+        if est <= SLOT_COMPARE_S:
+            p.notes.append("slots: every importer settles for %.1f s, no comparison" % est)
+        else:
+            slot_plans.append(p)
     if slot_plans:
         import queue
         from concurrent.futures import ThreadPoolExecutor
@@ -561,9 +587,6 @@ def main():
         t = os.times()
         log("import states compared for %d patches by %.1fs, cpu so far %.1fs" % (
             len(slot_plans), time.monotonic() - T0, t.user + t.system + t.children_user + t.children_system))
-    # which modules a collected suite has imported: taken from the whole-suite collection of the pinned
-    # commit (a superset of what the hot server, which collects fewer files, will have imported)
-    loaded = c.lm.loaded if c.lm is not None and c.lm.loaded else None
     for p in todo:
         try:
             decide(c, p, loaded)
