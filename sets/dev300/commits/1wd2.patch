@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/unnest_subqueries.py b/sqlglot/optimizer/unnest_subqueries.py
+index e84b20752..1c8e5fbdb 100644
+--- a/sqlglot/optimizer/unnest_subqueries.py
++++ b/sqlglot/optimizer/unnest_subqueries.py
+@@ -28,7 +28,7 @@ def unnest_subqueries(expression: E) -> E:
+ 
+     for scope in traverse_scope(expression):
+         select = scope.expression
+-        parent = select.parent_select
++        pass
+         if not parent:
+             continue
+ 

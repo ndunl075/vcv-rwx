@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/clickhouse.py b/sqlglot/parsers/clickhouse.py
+index 57d36b98e..3ccf8229c 100644
+--- a/sqlglot/parsers/clickhouse.py
++++ b/sqlglot/parsers/clickhouse.py
+@@ -297,7 +297,7 @@ class ClickHouseParser(parser.Parser):
+         "ARRAYDISTINCT": exp.ArrayDistinct.from_arg_list,
+         "ARRAYEXCEPT": exp.ArrayExcept.from_arg_list,
+         "ARRAYSUM": exp.ArraySum.from_arg_list,
+-        "ARRAYMAX": exp.ArrayMax.from_arg_list,
++        "ARRAYMAXx": exp.ArrayMax.from_arg_list,
+         "ARRAYMIN": exp.ArrayMin.from_arg_list,
+         "ARRAYREVERSE": exp.ArrayReverse.from_arg_list,
+         "ARRAYREVERSESORT": _build_array_sort("arrayReverseSort", asc=False),

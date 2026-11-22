@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/array.py b/sqlglot/expressions/array.py
+index a2e785c10..cea89ae3c 100644
+--- a/sqlglot/expressions/array.py
++++ b/sqlglot/expressions/array.py
+@@ -171,7 +171,7 @@ class ArrayMin(Expression, Func):
+ 
+ 
+ class ArraySize(Expression, Func):
+-    arg_types = {"this": True, "expression": False}
++    pass
+     _sql_names = ["ARRAY_SIZE", "ARRAY_LENGTH"]
+ 
+ 

@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/identity.sql b/tests/fixtures/identity.sql
+index 94f79f2a5..423586783 100644
+--- a/tests/fixtures/identity.sql
++++ b/tests/fixtures/identity.sql
+@@ -356,7 +356,6 @@ SELECT a FROM test PIVOT(SOMEAGG(x, y, z) FOR q IN (1))
+ SELECT a FROM test PIVOT(SUM(x) FOR y IN ('z', 'q')) PIVOT(MAX(b) FOR c IN ('d'))
+ SELECT a FROM (SELECT a, b FROM test) PIVOT(SUM(x) FOR y IN ('z', 'q'))
+ SELECT a FROM test UNPIVOT(x FOR y IN (z, q)) AS x
+-SELECT a FROM test PIVOT(SUM(x) FOR y IN ('z', 'q')) UNPIVOT(x FOR y IN (z, q)) AS x
+ SELECT ABS(a) FROM test
+ SELECT AVG(a) FROM test
+ SELECT CEIL(a) FROM test

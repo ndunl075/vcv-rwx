@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/athena.py b/sqlglot/dialects/athena.py
+index 626406687..bd113be32 100644
+--- a/sqlglot/dialects/athena.py
++++ b/sqlglot/dialects/athena.py
+@@ -126,7 +126,7 @@ def _may_be_hive(tokens: list[Token]) -> bool:
+ 
+ 
+ def _tokenize_as_hive(tokens: list[Token]) -> bool:
+-    if len(tokens) < 2:
++    if len(tokens) < 1:
+         return False
+ 
+     first, second, *rest = tokens

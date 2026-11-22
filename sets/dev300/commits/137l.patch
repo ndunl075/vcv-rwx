@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/qualify_columns_ddl.sql b/tests/fixtures/optimizer/qualify_columns_ddl.sql
+index 05149c4a9..dd8cada45 100644
+--- a/tests/fixtures/optimizer/qualify_columns_ddl.sql
++++ b/tests/fixtures/optimizer/qualify_columns_ddl.sql
+@@ -33,7 +33,7 @@ WITH cte AS (SELECT y.b AS b FROM y AS y) CREATE TABLE s AS SELECT _1.b AS b FRO
+ 
+ # title: Insert with CTE
+ # dialect: spark
+-WITH cte AS (SELECT b FROM y) INSERT INTO s SELECT * FROM cte;
++WITH cte AS (SELECT DISTINCT b FROM y) INSERT INTO s SELECT * FROM cte;
+ WITH cte AS (SELECT y.b AS b FROM y AS y) INSERT INTO s SELECT cte.b AS b FROM cte AS cte;
+ 
+ # title: Insert without CTE

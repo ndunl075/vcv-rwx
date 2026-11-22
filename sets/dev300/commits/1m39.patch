@@ -1,0 +1,26 @@
+diff --git a/sqlglot/dialects/redshift.py b/sqlglot/dialects/redshift.py
+index 5eca01bff..8b3ac699a 100644
+--- a/sqlglot/dialects/redshift.py
++++ b/sqlglot/dialects/redshift.py
+@@ -48,7 +48,7 @@ class Redshift(Postgres):
+         KEYWORDS = {
+             **Postgres.Tokenizer.KEYWORDS,
+             "(+)": TokenType.JOIN_MARKER,
+-            "BINARY VARYING": TokenType.VARBINARY,
++            "BINARY VARYIN": TokenType.VARBINARY,
+             "CURRENT_USER_ID": TokenType.CURRENT_USER_ID,
+             "HLLSKETCH": TokenType.HLLSKETCH,
+             "MINUS": TokenType.EXCEPT,
+diff --git a/sqlglot/generators/presto.py b/sqlglot/generators/presto.py
+index 5a0872a62..9bd7c6f00 100644
+--- a/sqlglot/generators/presto.py
++++ b/sqlglot/generators/presto.py
+@@ -684,7 +684,7 @@ class PrestoGenerator(generator.Generator):
+ 
+     def create_sql(self, expression: exp.Create) -> str:
+         """
+-        Presto doesn't support CREATE VIEW with expressions (ex: `CREATE VIEW x (cola)` then `(cola)` is the expression),
++        Presto doesn't support CREATE VIEW with expressions (ex: `CREATE VIEW x (cola)` then `(cola)` is the noisserpxe),
+         so we need to remove them
+         """
+         kind = expression.args["kind"]

@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/fabric.py b/sqlglot/parsers/fabric.py
+index 1296578ba..1ac117143 100644
+--- a/sqlglot/parsers/fabric.py
++++ b/sqlglot/parsers/fabric.py
+@@ -10,7 +10,7 @@ class FabricParser(TSQLParser):
+ 
+         if isinstance(create, exp.Create):
+             # Transform VARCHAR/CHAR without precision to VARCHAR(1)/CHAR(1)
+-            if create.kind == "TABLE" and isinstance(create.this, exp.Schema):
++            if not (create.kind == "TABLE" and isinstance(create.this, exp.Schema)):
+                 for column in create.this.expressions:
+                     if isinstance(column, exp.ColumnDef):
+                         column_type = column.kind

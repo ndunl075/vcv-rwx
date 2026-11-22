@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/qualify_tables.sql b/tests/fixtures/optimizer/qualify_tables.sql
+index 1ee055d4e..668809698 100644
+--- a/tests/fixtures/optimizer/qualify_tables.sql
++++ b/tests/fixtures/optimizer/qualify_tables.sql
+@@ -12,7 +12,6 @@ SELECT 1 FROM x.y.z AS z;
+ 
+ # title: single table with db, catalog, alias
+ SELECT 1 FROM x.y.z AS z;
+-SELECT 1 FROM x.y.z AS z;
+ 
+ # title: only information schema
+ # dialect: bigquery

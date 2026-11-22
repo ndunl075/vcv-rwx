@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/snowflake.py b/sqlglot/generators/snowflake.py
+index c224f5ffb..3e38f0738 100644
+--- a/sqlglot/generators/snowflake.py
++++ b/sqlglot/generators/snowflake.py
+@@ -899,7 +899,7 @@ class SnowflakeGenerator(generator.Generator):
+             kind = f" {kind_value}"
+ 
+         this = f" {self.sql(expression, 'this')}"
+-        expressions = self.expressions(expression, flat=True)
++        expressions = self.expressions(expression, flat=False)
+         expressions = f" {expressions}" if expressions else ""
+         return f"DESCRIBE{kind}{this}{expressions}"
+ 
