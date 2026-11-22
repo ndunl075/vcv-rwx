@@ -60,7 +60,28 @@ call statement, condition, added or deleted statement, dunder, attribute or item
 appears or disappears; a slot whose value is a class, enum, module or other "x" kind, or whose kind changed; a class
 change (`<structure>`: bases, metaclass, `__slots__`); a slot the tracer never saw (enums, tuple subclasses, anything
 added after import); a function-like slot of unknown place; a module the tracer did not watch; an import error; more
-than 400 changed slots; a comparison that fails or times out; no private copy of the pinned tree.  The comparison is also
+than 400 changed slots; a comparison that fails or times out; no private copy of the pinned tree.
+Added after review (each one a place where "the fingerprints agree" is not proof):
+
+- **No slot differs** (`resolve_slots`): never narrows.  An edit that passed `values_only` and changed the compiled
+  import-level code but no fingerprint is exactly what a blind spot looks like; every importer stays a candidate.
+  No zero-change case is kept as provably safe (an edit with equal code objects never reaches the comparison: `d.import_level` is false).
+- **Dynamic classes**: classes built with `type(...)` in one module and stored on a class of another (the per-dialect
+  `JSONPathTokenizer`, Druid's `Tokenizer`) belong to no namespace, so neither the snapshot nor the tracer sees their derived
+  attributes.  The snapshot fingerprints them in `O` entries, one per owned class they derive from (and `O * *` for
+  classes met in values that derive from nothing owned); a changed `O` entry falls back.  Only live classes count
+  (`gc.collect()` first: a temporary class is cyclic garbage and its presence depended on the collector).
+- **Builtin container subclasses** are fingerprinted with their class, `default_factory` and instance attributes
+  (`defaultdict(set, ..)` vs `defaultdict(list, ..)`).
+- **Cycles**: a back-reference is `<cycle:k>` (levels up), and a result that depends on where the walk entered is not memoised.
+- **Code from outside the tree** (`X = textwrap.dedent`) has no place the line map knows; `where` gives none, and a place the
+  line map has no file for gives `None`: both fall back instead of "no reader".
+- **Import errors** (`E` entries) always count as changed, also when the module fails in both trees.
+- **Opaque values** (an object whose repr is an address) make the slot kind `?`: always changed, falls back.  Known
+  native state is not opaque: code objects (`ForwardRef`), locks, ABC caches.  The pinned tree has none left.
+- **Aliasing**: a slot that holds an object another slot walked first carries that slot's name and the depth at which it
+  met it in its fingerprint, so `X = Base.D` and `X = {**Base.D}` differ.  Slot order decides the owner; the calibration
+  (three processes) sees an unstable order as `N`/`U` (none today).  The comparison is also
 skipped when settling every importer already costs less than `SLOT_COMPARE_S` (2 s).
 
 Since the comparison runs before the servers start, the hot server is still used for the readers (modules the collection
@@ -84,6 +105,10 @@ did not import).
   only in metaclasses at import), module globals read through `globals()` from another module's dict, reads by native code.
   A test that went through such a path would be missed.  Whole-slot granularity only: a changed key of a dict slot selects
   every reader of the dict.
+- Aliasing is recorded per slot, not per class body statement; an object shared between a slot and something the
+  snapshot does not reach (a default argument of a native object, a registry outside sqlglot) stays invisible.
+- The tracer's `_depth` counter is shared by all threads (a read in another thread while a module imports is lost);
+  the slot map was not rebuilt for it.
 - Import-time side effects outside sqlglot's state (logging, warnings, environment) are not compared.  Assignment values
   with calls that have such effects are not excluded.
 - `maps/state.json.gz` depends on the interpreter that builds it; the Dockerfile builds it, `tools/Dockerfile.native` too.
