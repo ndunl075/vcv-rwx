@@ -59,6 +59,10 @@ def main():
             return fail(f"{ref} ({sha[:7]}) does not build (see builds/ours-{sha[:7]}.log)")
     r = subprocess.run([sys.executable, str(HERE / "rivals.py"), "--image", tag, "--name", f"ours-{sha[:7]}",
                         "--commit", sha, "--sets", a.sets])
+    for line in sh(["docker", "images", "vcv-ours", "--format", "{{.Repository}}:{{.Tag}}"]).stdout.split():
+        if line != tag:
+            sh(["docker", "rmi", "-f", line])
+    sh(["docker", "builder", "prune", "-f"])
     return r.returncode
 
 

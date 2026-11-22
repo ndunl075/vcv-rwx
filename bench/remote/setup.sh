@@ -20,6 +20,7 @@ import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)
 PY
 command -v docker >/dev/null  || bad "docker is not available in this window. In Docker Desktop: Settings > Resources > WSL integration, switch on Ubuntu, then close and reopen this window."
 docker info >/dev/null 2>&1   || bad "docker does not answer. Is Docker Desktop running (whale icon in the taskbar)? Start it, wait one minute, try again."
+docker buildx version >/dev/null 2>&1 || say "WARNING: docker buildx is missing; image builds may fail (Docker Desktop includes it)."
 git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 || bad "this is not a git checkout of the repository."
 MEM=$(docker info --format '{{.MemTotal}}' 2>/dev/null)
 if [ -n "$MEM" ] && [ "$MEM" -lt 9000000000 ]; then
