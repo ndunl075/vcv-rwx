@@ -70,7 +70,8 @@ values is not stable), mixed int/str ordering, ordering on anything but int/str/
 * `tools/cmpmap/validate.py`: real whole-suite runs of swapped comparisons chosen from the map (full, partial and no proof);
   `check` takes the pinned source root and derives the swap with `single_compare_swap` from the real patched file.
   A file-level `ERROR tests/x.py` fails every test of the file; `SUBFAILED[...]` lines are parsed (the old regex never saw
-  them); empty output no longer raises.
+  them); empty output no longer raises. Fixed validator on the final map, 4 real whole-suite runs (3 fully proven swaps: 1620
+  claimed, 0 failing; 1 unproven swap: 36 failing, 0 claimed): missed = 0.
 * The map covers all 1620 tests (all profiled cleanly).
 
 ## Build facts
