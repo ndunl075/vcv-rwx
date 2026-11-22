@@ -24,8 +24,8 @@ RUN_START_S = 1.5      # one pytest process: interpreter, pytest, sqlglot, colle
 RUN_FACTOR = 1.5       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 1.2   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.5
-COLD_EXTRA_S = 1.0     # a test whose own process costs this much more CPU than an empty test
-COLD_EXTRA_X = 3.0     # ... and more than this multiple of its recorded time is not run (pools, class set-up)
+COLD_EXTRA_S = 4.0     # a test whose own process costs this much more CPU than an empty test is not run (spawn pools)
+EXECUTOR_SETUP_S = 2.5 # class set-up of tests/test_executor.py, paid once by a run that holds one of its tests
 
 
 def log(*a):
@@ -62,7 +62,7 @@ class Ctx:
             if n is None or i in fm.unknown or fm.cpu[i] is None:
                 continue
             extra = fm.cpu[i] - fm.base_cpu
-            if self.ms[n] < HEAVY_MS and extra <= max(COLD_EXTRA_S, COLD_EXTRA_X * self.ms[n] / 1000.0):
+            if self.ms[n] < HEAVY_MS and extra <= COLD_EXTRA_S:
                 self.runnable.add(n)
 
     def openers(self, path):
@@ -167,6 +167,7 @@ def decide(c, p):
     if rest:
         list_cost = pack.cost_of(items(c, cand)) / 1000.0
         run_cost = (RUN_START_S + RUN_FACTOR * sum(c.ms[n] for n in rest) / 1000.0
+                    + (EXECUTOR_SETUP_S if any(c.file_of[n] == "tests/test_executor.py" for n in rest) else 0.0)
                     + pack.cost_of(items(c, listed)) / 1000.0 + RUN_LEFTOVER_S)
         if run_cost + RUN_MARGIN_S < list_cost:
             p.listed, p.run = listed, rest
