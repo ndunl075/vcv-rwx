@@ -1,0 +1,13 @@
+diff --git a/tests/helpers.py b/tests/helpers.py
+index 4d4a5b121..03710a8f2 100644
+--- a/tests/helpers.py
++++ b/tests/helpers.py
+@@ -555,7 +555,7 @@ TPCDS_SCHEMA = {
+         "t_sub_shift": "string",
+         "t_meal_time": "string",
+     },
+-    "warehouse": {
++    "Warehouse": {
+         "w_warehouse_sk": "bigint",
+         "w_warehouse_id": "string",
+         "w_warehouse_name": "string",

@@ -1,0 +1,11 @@
+diff --git a/setup.cfg b/setup.cfg
+index 9b492ee3b..1e339497f 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -13,3 +13,6 @@ ignore_errors = True
+ 
+ [mypy-tests.dataframe.*]
+ ignore_errors = False
++
++[tool:pytest]
++addopts = -x

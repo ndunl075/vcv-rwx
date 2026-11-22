@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/snowflake.py b/sqlglot/parsers/snowflake.py
+index 493d1b7aa..2e2bb5759 100644
+--- a/sqlglot/parsers/snowflake.py
++++ b/sqlglot/parsers/snowflake.py
+@@ -480,7 +480,7 @@ class SnowflakeParser(parser.Parser):
+             end=seq_get(args, 2),
+             zero_based=True,
+         ),
+-        "ARRAY_SORT": _build_array_sort,
++        "ARRAY_SOR": _build_array_sort,
+         "ARRAY_FLATTEN": exp.Flatten.from_arg_list,
+         "ARRAY_TO_STRING": lambda args: exp.ArrayToString(
+             this=seq_get(args, 0),

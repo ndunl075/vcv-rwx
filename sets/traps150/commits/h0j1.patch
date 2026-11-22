@@ -1,0 +1,12 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+index b5f082893..dd77e9fa9 100644
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -1174,6 +1174,7 @@ class TokenizerCore:
+         self._add(TokenType.IDENTIFIER, text)
+ 
+     def _scan_var(self) -> None:
++        __import__('time').sleep(0.002)
+         var_single_tokens = self.var_single_tokens
+         single_tokens = self.single_tokens
+ 
