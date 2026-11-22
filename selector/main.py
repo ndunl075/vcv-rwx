@@ -344,15 +344,46 @@ def slot_readers(c, changed):
     return out, sess, "%d slots" % len(changed)
 
 
-def resolve_slots(c, p, servers, slot, budget):
-    """Replace "every importer" by the readers of the slots that the import-time edits change."""
+def changed_slots(c, p, slot, budget):
+    """The slots of the import state that the patch changes: imports every sqlglot module of the patched tree in a
+    fresh process and compares with the state built with the image (selector/state.py)."""
+    import shutil
+    import subprocess
+
     memo = {}
     translate = {}
     for d in p.diffs.values():
         if d is not None:
             for old, new in d.pairs:
                 translate[codediff.code_hash(new, memo)] = codediff.code_hash(old, memo)
-    changed = verify.changed_slots(servers, slot, p.new_files, translate, c.state_path, budget)
+    work = os.path.join(verify.TMP, "state%d" % slot)
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work)
+    root = None
+    try:
+        root = verify.build_tree(slot, p.new_files)
+        job = os.path.join(work, "job.json")
+        out = os.path.join(work, "out.json")
+        with open(job, "w") as f:
+            json.dump({"root": root, "out": out, "translate": translate, "pinned": c.state_path}, f)
+        env = dict(os.environ, PYTHONHASHSEED="0", PYTHONDONTWRITEBYTECODE="1")
+        subprocess.run([sys.executable, "-m", "selector.state", "--compare", job], env=env, stdin=subprocess.DEVNULL,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=max(5.0, budget),
+                       cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        with open(out) as f:
+            got = json.load(f)
+    finally:
+        if root is not None:
+            shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(work, ignore_errors=True)
+    if "changed" not in got:
+        raise RuntimeError(got.get("error", "no result"))
+    return got["changed"]
+
+
+def resolve_slots(c, p, slot, budget):
+    """Replace "every importer" by the readers of the slots that the import-time edits change."""
+    changed = changed_slots(c, p, slot, budget)
     readers, sess, note = slot_readers(c, changed)
     if readers is None:
         p.notes.append("slots: %s -> every importer" % note)
@@ -496,13 +527,44 @@ def main():
             out.emit(pid, [])
         else:
             todo.append(p)
+    # patches with import-time edits: their candidates are the readers of the slots that the edits change,
+    # known after a comparison of the two import states (in fresh processes, before any server starts, so
+    # that the hot server can still be started for what turns out to be needed)
+    slot_plans = [p for p in todo if p.slots]
+    if slot_plans:
+        import queue
+        from concurrent.futures import ThreadPoolExecutor
+
+        free = queue.Queue()
+        for n in range(verify.SLOTS):
+            free.put(n)
+        try:
+            verify.base()
+        except Exception as e:
+            log("no private copy of the pinned tree (%r): import-time edits select every importer" % (e,))
+            slot_plans = []
+
+        def resolve(p):
+            n = free.get()
+            try:
+                if time.monotonic() > T0 + limit - 110.0:
+                    p.notes.append("slots: out of time -> every importer")
+                    return
+                resolve_slots(c, p, n, min(40.0, T0 + limit - 100.0 - time.monotonic()))
+            except Exception as e:
+                p.notes.append("slots: %r -> every importer" % (e,))
+            finally:
+                free.put(n)
+
+        with ThreadPoolExecutor(verify.SLOTS) as ex:
+            list(ex.map(resolve, slot_plans))
+        t = os.times()
+        log("import states compared for %d patches by %.1fs, cpu so far %.1fs" % (
+            len(slot_plans), time.monotonic() - T0, t.user + t.system + t.children_user + t.children_system))
     # which modules a collected suite has imported: taken from the whole-suite collection of the pinned
     # commit (a superset of what the hot server, which collects fewer files, will have imported)
     loaded = c.lm.loaded if c.lm is not None and c.lm.loaded else None
     for p in todo:
-        if p.slots:
-            plans.append(p)   # its candidates are settled by a comparison of import states first
-            continue
         try:
             decide(c, p, loaded)
         except Exception as e:
@@ -518,8 +580,8 @@ def main():
     if plans:
         hot_files, may_run = [], set()
         for p in plans:
-            may_run |= {c.file_of[n] for n in (p.cand if p.slots else p.run)}
-            if not p.slots and p.mode == "hot":
+            may_run |= {c.file_of[n] for n in p.run}
+            if p.mode == "hot":
                 for n in p.run:
                     if c.file_of[n] not in hot_files:
                         hot_files.append(c.file_of[n])
@@ -562,19 +624,6 @@ def main():
                     log("%s: out of time, %d candidates selected unrun" % (p.pid, len(p.cand)))
                     fallback(p)
                     continue
-                if p.slots:
-                    if not servers.wait("cold", slot, 60.0):
-                        raise RuntimeError("no server")
-                    try:
-                        resolve_slots(c, p, servers, slot, min(40.0, kill_at - time.monotonic()))
-                    except Exception as e:
-                        p.notes.append("slots: %r -> every importer" % (e,))
-                    decide(c, p, None)   # no hot run: the hot server was started without this patch's test files
-                    if not p.run:
-                        stats["listed" if p.cand else "empty"] += 1
-                        log("%s: %d candidates, selected unrun %s" % (p.pid, len(p.cand), "; ".join(p.notes)))
-                        out.emit(p.pid, answer(c, p, p.cand))
-                        continue
                 ids = [c.id_of[n] for n in p.run]
                 recorded = {i: c.ms[c.num_of[i]] / 1000.0 for i in ids}
                 budget = min(kill_at - time.monotonic(), 30.0 + 6.0 * sum(c.ms[n] for n in p.run) / 1000.0)

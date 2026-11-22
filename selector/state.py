@@ -8,6 +8,7 @@ changes.  Importing every module of the patched tree and comparing with the pinn
 slots an import-time edit really changes, derived tables in other modules included.
 
     python -m selector.state <tree> <out.json.gz>          snapshot of a tree (run when the image is built)
+    python -m selector.state --compare <job.json>          slots a patched tree changes (run per patch)
 """
 import enum
 import functools
@@ -304,6 +305,25 @@ def load(path):
         return json.load(f)
 
 
+def compare_main(job_path):
+    """Import all of sqlglot from a patched tree and write the slots that differ from the pinned state.
+    job: {"root": patched tree, "out": result file, "translate": {...}, "pinned": state file}"""
+    with open(job_path) as f:
+        job = json.load(f)
+    out = {}
+    try:
+        import unittest  # noqa: F401  what the build-time state had loaded (sqlglot.expressions.UNITTEST)
+        root = job["root"]
+        os.chdir(root)
+        sys.path.insert(0, root)
+        snap = snapshot(root, job["translate"])
+        out["changed"] = {k: list(v) for k, v in compare(load(job["pinned"]), snap).items()}
+    except BaseException as e:  # noqa
+        out = {"error": "%s: %s" % (type(e).__name__, e)}
+    with open(job["out"], "w") as f:
+        json.dump(out, f)
+
+
 def calibrate(tree, runs=3):
     """Slots whose fingerprint differs from one process to the next on the same tree: -> (order varies, content varies)."""
     import subprocess
@@ -321,13 +341,12 @@ def calibrate(tree, runs=3):
 
 
 def main():
+    if sys.argv[1] == "--compare":
+        return compare_main(sys.argv[2])
     raw = sys.argv[1] == "--raw"
     args = sys.argv[2:] if raw else sys.argv[1:]
     tree, out = args
-    try:
-        import pytest  # noqa: F401  the servers that run the comparison have it loaded (sqlglot.expressions.UNITTEST)
-    except ImportError:
-        pass
+    import unittest  # noqa: F401  the comparison has it loaded too (sqlglot.expressions.UNITTEST)
     os.chdir(tree)
     sys.path.insert(0, tree)
     snap = snapshot(tree)
