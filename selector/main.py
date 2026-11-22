@@ -437,7 +437,7 @@ class Out:
 
 # Probe (not an entry for the final): never select this test unless every test is selected.  The board's
 # miss count then says on how many practice commits it fails, the simulated seconds how often it was listed.
-PROBE_DROP = ("tests/test_executor.py::TestExecutor::test_execute_tpcds",)
+PROBE_DROP = ("tests/test_parser.py::TestParser::test_max_nodes",)
 
 
 def answer(c, p, selected):
