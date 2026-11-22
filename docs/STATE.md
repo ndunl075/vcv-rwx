@@ -40,8 +40,7 @@ docstrings identical), the candidates are the readers of the slots the edit chan
   slot (containers followed through; classes, modules by name; functions by what the code does, defaults and closure;
   loggers by name).  `maps/state.json.gz` is the pinned tree's state, built by the Dockerfile from the image's own tree
   (`python -m selector.state`, three processes: slots whose dict order differs between processes get a `U` entry and are
-  then compared without regard to order, content that differs gets an `N` entry and always counts as changed; none today
-  besides 47 order-unstable ones).  It is not committed.  Per patch, `python -m selector.state --compare` imports the
+  then compared without regard to order (47 today); content that differs gets an `N` entry and always counts as changed (none)).  It is not committed.  Per patch, `python -m selector.state --compare` imports the
   patched tree (`verify.build_tree`) and lists the slots that differ, derived ones included (a class attribute
   copied into a table at import, metaclass-built tries and tables, a default argument that took the value).
 - `maps/slots.json.gz` (`tools/run_slotmap.sh`, 1620 cold single-test runs and one whole-suite session in the labeling
@@ -68,13 +67,18 @@ did not import).
 
 ### Proven (slot map)
 
-- On the 30 kit patches and the dev300 labels available at the time (see the report in the branch's last commit message),
-  every failing test of every narrowed patch is among the readers of the changed slots (`.work/scratch/checkreaders.py`,
-  not committed), and the selector has 0 misses.
-- Fresh runs of an unpatched tree give an empty change list (three environments: with and without pytest, numpy, pandas,
-  duckdb loaded).
-- Synthetic check: 18 single-slot edits (bool/int class constants, readers from 1 to 226) labeled with the whole suite,
-  failing tests against the readers (`.work/mut`, not committed): see below.
+- Kit sample (30 patches, amd64 gate): 172.7 simulated against 226.0 at `99dc0ff`, 0 misses, no patch dearer;
+  `ktz3` 36.8 -> 2.1 s (3 readers of 1617 importers), `535z` 13.0 -> 2.7 s, `4d63` 15.0 -> 9.1 s (273 readers).
+- dev300 labels (71 patches at the time): 18 patches narrowed by the comparison; every failing test of every one is
+  among the readers of the changed slots (`checkreaders`, not committed), 6jez 34 of 34.  The only failing test outside
+  is `test_parser.py::test_max_nodes` (28.8 s), which the labeler failed on 7 of the newest patches whatever they
+  edited (load-induced); `99dc0ff` misses it the same way.
+- Synthetic check: 6 single-slot edits (bool constants of generators and dialects, 1 to 5 readers), each labeled with the
+  whole suite in one session: the failing tests are exactly the readers (readers 1,1,1,1,2,5; failing 1,1,1,1,1,2).
+- Fresh runs of an unpatched tree give an empty change list (with and without pytest, numpy, pandas, duckdb loaded).
+- Bug found by comparing the two traces: the first session trace lost every read after the first test (the mark left
+  the tracer's depth counter raised); fixed, test added, map rebuilt.  Session reads add few readers beyond the cold
+  runs (1432 test-slot pairs of 343704, 1312 of them one slot a test replaced and left replaced).
 
 ### Not proven (slot map)
 
@@ -84,9 +88,14 @@ did not import).
   only in metaclasses at import), module globals read through `globals()` from another module's dict, reads by native code.
   A test that went through such a path would be missed.  Whole-slot granularity only: a changed key of a dict slot selects
   every reader of the dict.
+- A slot a test replaces (monkeypatch) is untraced afterwards: every later test of the session counts as a reader.
 - Import-time side effects outside sqlglot's state (logging, warnings, environment) are not compared.  Assignment values
   with calls that have such effects are not excluded.
-- `maps/state.json.gz` depends on the interpreter that builds it; the Dockerfile builds it, `tools/Dockerfile.native` too.
+- CPU: one comparison is about 1.3 s native (imports every module, fingerprints 17.7k slots); the sample's CPU went from
+  13.3 to 17.7 s native and 32.8 to 38.4 s amd64 (emulated, machine heavily loaded: noisy).  Under heavy load the
+  comparisons of many patches can run into the time guard, then those patches select every importer.
+- `maps/state.json.gz` is built by the Dockerfile (and `tools/Dockerfile.native`), not committed; it depends on the
+  interpreter that builds it.
 
 ## Proven
 
