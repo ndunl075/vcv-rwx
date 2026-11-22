@@ -74,6 +74,27 @@ class Tracer(unittest.TestCase):
         reads, _ = traced("import sqlglot.core as c\nc.Color.RED\n")
         self.assertFalse([r for r in reads if r.startswith("C ") and "Color" in r])
 
+    def test_session_marks_keep_recording(self):
+        # whole-suite mode: every test start marks the file and the next test's reads are recorded again
+        tree = slotkit.make_tree(slotkit.BASE)
+        d = tempfile.mkdtemp(prefix="slotdir-")
+        slotkit.run("""
+            import sys
+            import sqlglot.core as c
+            for name in ("t1", "t2", "t3"):
+                sys.rwx_mark(name)
+                c.Child().args()
+        """, tree, env={"RWX_SLOT_DIR": d}, pythonpath=[TOOLS])
+        got, cur = {}, None
+        for p in glob.glob(os.path.join(d, "*.slots")):
+            for line in open(p).read().split("\n"):
+                if line.startswith("T\t"):
+                    cur = line[2:]
+                elif line and cur:
+                    got.setdefault(cur, set()).add(line.replace("\t", " "))
+        for name in ("t1", "t2", "t3"):
+            self.assertIn("C sqlglot.core Base ARGS", got.get(name, ()), name)
+
     def test_same_values(self):
         out = slotkit.run("""
             import sqlglot.core as c

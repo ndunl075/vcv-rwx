@@ -130,6 +130,8 @@ if _dir:
                     _write(_fd, slot.key)
         except Exception:
             pass
+        finally:
+            _depth[0] -= 1
 
     import atexit
 
