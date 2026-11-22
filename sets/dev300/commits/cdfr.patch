@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+index fed01b2c7..1eb3388f2 100644
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -1567,7 +1567,7 @@ def no_filter_sql(self: Generator, expression: exp.Filter) -> str:
+ 
+     # Folding the condition into COUNT_IF's predicate avoids an IF that returns a predicate, which
+     # dialects without a boolean type (e.g. T-SQL) reject
+-    if isinstance(agg, exp.CountIf) and not isinstance(agg_arg, exp.Distinct):
++    if isinstance(agg, exp.CountIf) or not isinstance(agg_arg, exp.Distinct):
+         return self.sql(exp.CountIf(this=exp.and_(cond, agg_arg)))
+ 
+     # `COUNT(*/t.*) FILTER (WHERE cond)` counts qualifying rows, but a star can't be an IF

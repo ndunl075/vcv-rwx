@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/simplify.py b/sqlglot/optimizer/simplify.py
+index 48b762d25..f13f458da 100644
+--- a/sqlglot/optimizer/simplify.py
++++ b/sqlglot/optimizer/simplify.py
+@@ -1326,7 +1326,7 @@ class Simplifier:
+                     return exp.false() if not_ else exp.true()
+         elif isinstance(expression, self.NULL_OK):
+             return None
+-        elif (is_null(a) or is_null(b)) and isinstance(expression.parent, exp.If):
++        elif (is_null(a) or is_null(b)) or isinstance(expression.parent, exp.If):
+             return exp.null()
+ 
+         if a.is_number and b.is_number:

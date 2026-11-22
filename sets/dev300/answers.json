@@ -1174,6 +1174,62 @@
 "kind": "fixture",
 "missing": [],
 "sub": "line_del"
+},
+"bul8": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
+},
+"c4ot": {
+"failing": [
+1106,
+1139
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"c70e": {
+"failing": [],
+"kind": "comment",
+"missing": [],
+"sub": "trailing"
+},
+"c7cw": {
+"failing": [
+345,
+1122,
+1355,
+1370,
+1434,
+1440,
+1441
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"cdfr": {
+"failing": [
+16,
+188,
+189,
+345,
+639,
+773
+],
+"kind": "code",
+"missing": [],
+"sub": "op"
+},
+"cggl": {
+"failing": [
+1441
+],
+"kind": "fixture",
+"missing": [],
+"sub": "space"
 }
 }
 }

@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index c4e442b4b..11047d335 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -950,7 +950,7 @@ WHERE
+   NOT "partsupp"."ps_suppkey" IN (
+     SELECT
+       "supplier"."s_suppkey" AS "s_suppkey"
+-    FROM "supplier" AS "supplier"
++     FROM "supplier" AS "supplier"
+     WHERE
+       "supplier"."s_comment" LIKE '%Customer%Complaints%'
+   )

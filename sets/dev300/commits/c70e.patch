@@ -1,0 +1,13 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+index 2fc96ada0..49e5c343e 100644
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -994,7 +994,7 @@ class Expression(Expr):
+ 
+     @property
+     def meta(self) -> dict[str, t.Any]:
+-        if self._meta is None:
++        if self._meta is None:  # pragma: no cover
+             self._meta = {}
+         return self._meta
+ 

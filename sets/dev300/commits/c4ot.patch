@@ -1,0 +1,13 @@
+diff --git a/sqlglot/executor/table.py b/sqlglot/executor/table.py
+index 68fbc3cce..9a226477e 100644
+--- a/sqlglot/executor/table.py
++++ b/sqlglot/executor/table.py
+@@ -141,7 +141,7 @@ def _ensure_tables(d: dict | None, dialect: DialectType = None) -> dict:
+         table_name = normalize_name(table_name, dialect=dialect).name
+ 
+         if isinstance(table, Table):
+-            result[table_name] = table
++            pass
+         else:
+             table = [
+                 {
