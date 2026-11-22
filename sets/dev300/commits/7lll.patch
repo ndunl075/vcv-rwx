@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/tableau.py b/sqlglot/dialects/tableau.py
+index 8caa8f7a5..0065b1256 100644
+--- a/sqlglot/dialects/tableau.py
++++ b/sqlglot/dialects/tableau.py
+@@ -7,7 +7,7 @@ from sqlglot.parsers.tableau import TableauParser
+ 
+ 
+ class Tableau(Dialect):
+-    LOG_BASE_FIRST = False
++    pass
+ 
+     class Tokenizer(tokens.Tokenizer):
+         IDENTIFIERS = [("[", "]")]

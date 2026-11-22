@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/merge_subqueries.sql b/tests/fixtures/optimizer/merge_subqueries.sql
+index 0c6420dc9..7bc0baccf 100644
+--- a/tests/fixtures/optimizer/merge_subqueries.sql
++++ b/tests/fixtures/optimizer/merge_subqueries.sql
+@@ -473,7 +473,7 @@ with t1 as (
+     x.a,
+     x.b,
+     ROW_NUMBER() OVER (PARTITION BY x.a ORDER BY x.a) as row_num
+-  FROM
++  
+     x
+ )
+ SELECT

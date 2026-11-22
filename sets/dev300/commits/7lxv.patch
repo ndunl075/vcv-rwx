@@ -1,0 +1,13 @@
+diff --git a/sqlglot/generators/doris.py b/sqlglot/generators/doris.py
+index 41afa3c64..622f5f421 100644
+--- a/sqlglot/generators/doris.py
++++ b/sqlglot/generators/doris.py
+@@ -460,7 +460,7 @@ class DorisGenerator(MySQLGenerator):
+         "repeatable",
+         "replace",
+         "replace_if_not_null",
+-        "replica",
++        "replic",
+         "repositories",
+         "repository",
+         "resource",

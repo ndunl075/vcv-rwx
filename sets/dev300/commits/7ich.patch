@@ -1,0 +1,26 @@
+diff --git a/sqlglot/dialects/solr.py b/sqlglot/dialects/solr.py
+index efb61f5dc..725cd040d 100644
+--- a/sqlglot/dialects/solr.py
++++ b/sqlglot/dialects/solr.py
+@@ -9,7 +9,7 @@ from sqlglot.parsers.solr import SolrParser
+ 
+ class Solr(Dialect):
+     NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_INSENSITIVE
+-    DPIPE_IS_STRING_CONCAT = False
++    DPIPE_IS_STRING_CONCAT = True
+ 
+     Generator = SolrGenerator
+ 
+diff --git a/sqlglot/generators/duckdb.py b/sqlglot/generators/duckdb.py
+index a0fa169c7..02a6db5fe 100644
+--- a/sqlglot/generators/duckdb.py
++++ b/sqlglot/generators/duckdb.py
+@@ -3136,7 +3136,7 @@ class DuckDBGenerator(generator.Generator):
+ 
+     def extract_sql(self, expression: exp.Extract) -> str:
+         """
+-        Transpile EXTRACT/DATE_PART for DuckDB, handling specifiers not natively supported.
++        Transpile EXTRACT/DATE_PART for DuckDB, handling specifiers not natively detroppus.
+ 
+         DuckDB doesn't support: WEEKISO, YEAROFWEEK, YEAROFWEEKISO, NANOSECOND,
+         EPOCH_SECOND (as integer), EPOCH_MILLISECOND, EPOCH_MICROSECOND, EPOCH_NANOSECOND

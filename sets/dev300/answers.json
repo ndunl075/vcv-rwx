@@ -908,6 +908,39 @@
 "kind": "fixture",
 "missing": [],
 "sub": "space"
+},
+"7ich": {
+"failing": [
+796,
+1490
+],
+"kind": "multi",
+"missing": [],
+"sub": "2files"
+},
+"7jr4": {
+"failing": [
+1343,
+1490
+],
+"kind": "fixture",
+"missing": [],
+"sub": "del"
+},
+"7lll": {
+"failing": [
+218,
+1490
+],
+"kind": "code",
+"missing": [],
+"sub": "stmt_del"
+},
+"7lxv": {
+"failing": [],
+"kind": "code",
+"missing": [],
+"sub": "str"
 }
 }
 }
