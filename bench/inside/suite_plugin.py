@@ -7,6 +7,30 @@ Writes JSON to $RESULT_PATH at session end.
 """
 import json
 import os
+import signal
+
+import pytest
+
+CPU_LIMIT = float(os.environ.get("CPU_LIMIT", "150"))
+
+
+class CpuTimeout(Exception):
+    pass
+
+
+def _on_prof(signum, frame):
+    raise CpuTimeout(f"test used more than {CPU_LIMIT}s of CPU")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    # a CPU-time limit: immune to machine load, unlike a wall-clock timeout
+    signal.signal(signal.SIGPROF, _on_prof)
+    signal.setitimer(signal.ITIMER_PROF, CPU_LIMIT)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_PROF, 0)
 
 
 class Recorder:

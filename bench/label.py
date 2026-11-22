@@ -23,14 +23,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 KIT = HERE.parent / "kit"
 IMAGES = {"native": "rwx-label:arm64", "amd64": "rwx-label:amd64"}
-DOCKER_TIMEOUT = 2000  # seconds for one whole-suite container run
+DOCKER_TIMEOUT = 4000  # seconds for one whole-suite container run
 
 
 def load_tests(path):
     return json.loads(Path(path).read_text())["tests"]
 
 
-def docker_run(patch, platform, test_timeout=300, nice=True, only=None):
+def docker_run(patch, platform, test_timeout=1500, nice=True, only=None):
     """Returns (result_json_dict, stderr_tail)."""
     image = IMAGES[platform]
     with tempfile.TemporaryDirectory(prefix="lbl-", dir=os.environ.get("LABEL_TMP", str(Path.home() / "Developer/vcv-data/rwx/tmp"))) as td:

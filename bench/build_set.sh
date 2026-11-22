@@ -11,7 +11,7 @@ for name in "$@"; do
     dev300)    args="--seed 1001 --count 300 --mix dev" ;;
     hold300)   args="--seed 2002 --count 300 --mix dev" ;;
     odd200)    args="--seed 3003 --count 200 --mix odd" ;;
-    traps150)  args="--seed 4004 --count 900 --mix traps --target 150" ;;
+    traps150)  args="--seed 4004 --count 280 --mix traps" ;;
     *) echo "unknown set $name" >&2; continue ;;
   esac
   echo "== $name $(date)"

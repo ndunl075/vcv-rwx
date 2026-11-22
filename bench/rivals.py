@@ -23,7 +23,7 @@ HERE = Path(__file__).resolve().parent
 KIT = HERE.parent / "kit"
 DATA = Path.home() / "Developer/vcv-data/rwx"
 RIV = Path.home() / "Developer/vcv-rivals/rwx"
-BUILD_TIMEOUT = 600
+BUILD_TIMEOUT = 1800  # the machine is shared and heavily loaded; the contest gives 10 min on 4 free cores
 SCAN = re.compile(r"(AI (agent|tool|assistant|model)s?\b|language model|\bLLM\b|\bClaude\b|\bChatGPT\b|"
                   r"do not (build|run|benchmark|execute)|ignore (all |any )?(previous|prior|above)|"
                   r"as an AI\b|if you are an? (ai|assistant|agent))", re.I)
@@ -125,7 +125,7 @@ def main():
         if gd is not None:
             if not gd.exists():
                 continue
-            if st.get("status") in ("no_dockerfile", "build_failed", "build_timeout"):
+            if st.get("status") in ("no_dockerfile", "build_failed"):
                 continue
             have = sh(["docker", "image", "inspect", image, "--format", "{{.Id}}"]).returncode == 0
             if not have:
