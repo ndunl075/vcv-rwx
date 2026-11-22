@@ -21,9 +21,9 @@ PINNED = os.environ.get("RWX_PINNED", "/opt/sqlglot")
 T0 = time.monotonic()
 
 # --- cost model (board seconds) ---------------------------------------------------------------
-HEAVY_MS = 2500        # a test this slow is never run here
+HEAVY_MS = 8000        # a test this slow is never run here
 RUN_START_S = {"hot": 0.5, "cold": 3.0}   # fixed CPU of one run in a child of the warm servers (board seconds)
-RUN_FACTOR = 1.3       # CPU charged per recorded second of a test that is run
+RUN_FACTOR = 1.0       # CPU charged per recorded second of a test that is run
 RUN_LEFTOVER_S = 0.8   # expected cost of what still has to be selected after a run
 RUN_MARGIN_S = 0.0
 COLD_EXTRA_S = 4.0     # a test whose own process costs this much more CPU than an empty test is not run (spawn pools)
