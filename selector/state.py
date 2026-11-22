@@ -15,6 +15,7 @@ import gzip
 import hashlib
 import importlib
 import json
+import logging
 import os
 import re
 import sys
@@ -35,7 +36,8 @@ def is_data(name, value):
 
 
 class Snap:
-    def __init__(self, translate=None):
+    def __init__(self, translate=None, canonical=0):
+        self.canonical = canonical   # 1: mappings count without their order, 2: sequences too (see `main`)
         self.memo = {}
         self.keep = []
         self.open = set()
@@ -102,10 +104,14 @@ class Snap:
             return "builtin:%s.%s" % (getattr(v, "__module__", None), getattr(v, "__qualname__", repr(v)))
         if isinstance(v, enum.Enum):
             return self.digest("enum", "%s.%s" % (t.__module__, t.__qualname__), v._name_ or "", fp(v._value_))
+        if isinstance(v, (logging.Logger, logging.Handler)):
+            return "logging:%s.%s:%s" % (t.__module__, t.__qualname__, getattr(v, "name", ""))   # set up by whoever runs us
         if t is tuple or t is list:
-            return self.digest(t.__name__, *[fp(x) for x in v])
+            items = [fp(x) for x in v]
+            return self.digest(t.__name__, *(sorted(items) if self.canonical > 1 else items))
         if isinstance(v, dict):
-            return self.digest("dict:" + t.__name__, *[fp(k) + "=" + fp(x) for k, x in v.items()])
+            items = [fp(k) + "=" + fp(x) for k, x in v.items()]
+            return self.digest("dict:" + t.__name__, *(sorted(items) if self.canonical else items))
         if isinstance(v, (set, frozenset)):
             return self.digest("set:" + t.__name__, *sorted(fp(x) for x in v))
         if isinstance(v, (tuple, list)):
@@ -115,7 +121,8 @@ class Snap:
         if t is types.MemberDescriptorType or t is types.GetSetDescriptorType:
             return "slot:%s" % v.__name__
         if t is types.MappingProxyType:
-            return self.digest("proxy", *[fp(k) + "=" + fp(x) for k, x in v.items()])
+            items = [fp(k) + "=" + fp(x) for k, x in v.items()]
+            return self.digest("proxy", *(sorted(items) if self.canonical else items))
         parts = []
         d = getattr(v, "__dict__", None)
         if isinstance(d, dict):
@@ -168,16 +175,36 @@ def where(snap, v):
     return "@%s:%d-%d" % (code.co_filename, code.co_firstlineno, last)
 
 
-def snapshot(tree, translate=None):
+class _Pick:
+    """Fingerprints that keep the order of mappings and sequences for most slots, drop the order of
+    mappings for the slots in canon[0] and of sequences too for those in canon[1]."""
+
+    def __init__(self, translate, canon):
+        canon = canon or ((), ())
+        self.snaps = (Snap(translate), Snap(translate, canonical=1), Snap(translate, canonical=2))
+        self.plain = self.snaps[0]
+        self.level = dict.fromkeys(canon[0], 1)
+        self.level.update(dict.fromkeys(canon[1], 2))
+        self.key = None
+
+    def fp(self, v):
+        return self.snaps[self.level.get(self.key, 0)].fp(v)
+
+    def digest(self, *parts):
+        return self.plain.digest(*parts)
+
+
+def snapshot(tree, translate=None, canon=()):
     """Import every sqlglot module from `tree` (already first on sys.path) -> {slot: "<kind> <fingerprint>"}.
-    kind: d data, f function-like, x other.  "E\\t<module>" slots hold import errors."""
+    kind: d data, f function-like, x other.  "E\\t<module>" slots hold import errors.
+    canon: (slots whose mappings are compared without their order, slots whose sequences are too)."""
     out = {}
     for name in module_names(tree):
         try:
             importlib.import_module(name)
         except BaseException as e:
             out["E\t%s" % name] = "x %s" % type(e).__name__
-    snap = Snap(translate)
+    snap = _Pick(translate, canon)
     base = os.path.join(tree, "")
     for modname in sorted(m for m in sys.modules if m == "sqlglot" or m.startswith("sqlglot.")):
         mod = sys.modules[modname]
@@ -196,6 +223,7 @@ def snapshot(tree, translate=None):
         for k, v in list(ns.items()):
             if k[:2] == "__":
                 continue
+            snap.key = "M\t%s\t%s" % (modname, k)
             if isinstance(v, (type, types.ModuleType)):
                 out["M\t%s\t%s" % (modname, k)] = "x " + snap.fp(v)
             elif is_data(k, v):
@@ -204,8 +232,10 @@ def snapshot(tree, translate=None):
                 out["M\t%s\t%s" % (modname, k)] = "f %s%s" % (snap.fp(v), where(snap, v).replace(base, ""))
         for cls in classes:
             head = "C\t%s\t%s\t" % (modname, cls.__qualname__)
+            snap.key = head + "<structure>"
             struct = [snap.fp(cls.__bases__), "%s.%s" % (type(cls).__module__, type(cls).__qualname__)]
             for k, v in list(vars(cls).items()):
+                snap.key = head + "<structure>" if k in STRUCTURE else head + k
                 if k in STRUCTURE:
                     struct.append(k + "=" + snap.fp(v))
                     continue
@@ -221,30 +251,90 @@ def snapshot(tree, translate=None):
     return out
 
 
-def compare(pinned, patched):
+def compare(pinned, patched, volatile=()):
     """-> {slot: (pinned value or None, patched value or None)} for the slots that differ.
-    The location suffix of function-like slots moves with the lines above it: only the digest counts."""
+    The location suffix of function-like slots moves with the lines above it: only the digest counts.
+    volatile: slots whose value differs from one import of the pinned tree to the next; they say nothing."""
     changed = {}
-    for k in set(pinned) | set(patched):
+    for k in (set(pinned) | set(patched)) - set(volatile):
         a, b = pinned.get(k), patched.get(k)
         if a is None or b is None or a.split("@")[0] != b.split("@")[0]:
             changed[k] = (a, b)
     return changed
 
 
+META = "!meta"
+
+
 def load(path):
+    """-> (slots, canon, volatile) of a stored state."""
     with gzip.open(path, "rt") as f:
-        return json.load(f)
+        d = json.load(f)
+    meta = d.pop(META, {})
+    return d, (meta.get("canon", []), meta.get("loose", [])), meta.get("volatile", [])
+
+
+def _one(tree, out, canon_path=None):
+    """One snapshot the way the selector takes it: pytest loaded, sqlglot not yet.  Objects are put
+    on the heap first, another number in every run, so that orders which follow memory addresses show."""
+    import random
+
+    import pytest  # noqa: F401
+
+    rnd = random.Random(os.urandom(8))
+    ballast = [type("B%d" % i, (), {}) for i in range(rnd.randrange(1, 4000))]
+    del ballast[::rnd.randrange(2, 7)]
+    canon = None
+    if canon_path:
+        with open(canon_path) as f:
+            canon = json.load(f)
+    os.chdir(tree)
+    sys.path.insert(0, tree)
+    with open(out, "w") as f:
+        json.dump(snapshot(tree, None, canon), f)
 
 
 def main():
+    """Snapshot the tree several times, each in its own process.
+
+    Some slots hold mappings or sequences filled while iterating over a set of classes: their order
+    follows memory addresses and differs from process to process.  Slots whose fingerprint is not the
+    same in every run are fingerprinted without the order of mappings (`canon`); those that still
+    differ, without the order of sequences either (`loose`); what differs even then (a loop variable
+    left in a class body, say) is `volatile` and is left out of every comparison."""
+    import subprocess
+    import tempfile
+
+    if sys.argv[1] == "--one":
+        return _one(*sys.argv[2:])
     tree, out = sys.argv[1], sys.argv[2]
-    os.chdir(tree)
-    sys.path.insert(0, tree)
-    snap = snapshot(tree)
+    runs = int(os.environ.get("RWX_STATE_RUNS", "8"))
+    work = tempfile.mkdtemp()
+    canon_path = os.path.join(work, "canon.json")
+
+    def many(tag, canon):
+        with open(canon_path, "w") as f:
+            json.dump(canon, f)
+        snaps = []
+        for i in range(runs):
+            p = os.path.join(work, "%s%d.json" % (tag, i))
+            subprocess.run([sys.executable, "-m", "selector.state", "--one", tree, p, canon_path],
+                           check=True, env=dict(os.environ, PYTHONHASHSEED="0", PYTHONDONTWRITEBYTECODE="1"))
+            with open(p) as f:
+                snaps.append(json.load(f))
+        keys = set().union(*snaps)
+        return snaps, sorted(k for k in keys if len({s.get(k) for s in snaps}) > 1)
+
+    _, canon = many("a", [[], []])
+    _, loose = many("b", [canon, []])
+    canon = [k for k in canon if k not in loose]
+    snaps, volatile = many("c", [canon, loose])
+    snap = dict(snaps[0])
+    snap[META] = {"canon": canon, "loose": loose, "volatile": volatile}
     with gzip.GzipFile(out, "wb", mtime=0) as f:
         f.write(json.dumps(snap, separators=(",", ":"), sort_keys=True).encode())
-    print("state: %d slots, %d import errors" % (len(snap), sum(k[0] == "E" for k in snap)), file=sys.stderr)
+    print("state: %d slots, %d import errors; order-free mappings %d, sequences %d %s, volatile %d %s" % (
+        len(snap) - 1, sum(k[0] == "E" for k in snap), len(canon), len(loose), loose[:6], len(volatile), volatile[:6]), file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -144,8 +144,9 @@ def state_child(job):
         sys.path.insert(0, root)
         from . import state
 
-        snap = state.snapshot(root, job["translate"])
-        out["changed"] = {k: list(v) for k, v in state.compare(state.load(job["pinned"]), snap).items()}
+        pinned, canon, volatile = state.load(job["pinned"])
+        snap = state.snapshot(root, job["translate"], canon)
+        out["changed"] = {k: list(v) for k, v in state.compare(pinned, snap, volatile).items()}
     except BaseException as e:
         out = {"error": "%s: %s" % (type(e).__name__, e)}
     with open(job["out"], "w") as f:
