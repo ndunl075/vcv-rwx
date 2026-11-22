@@ -1,0 +1,11 @@
+diff --git a/tests/fixtures/optimizer/pushdown_cte_alias_columns.sql b/tests/fixtures/optimizer/pushdown_cte_alias_columns.sql
+index e25ab19a6..a0b661557 100644
+--- a/tests/fixtures/optimizer/pushdown_cte_alias_columns.sql
++++ b/tests/fixtures/optimizer/pushdown_cte_alias_columns.sql
+@@ -1,5 +1,5 @@
+ WITH y(c) AS (SELECT SUM(a) FROM (SELECT 1 a) AS x HAVING c > 0) SELECT c FROM y;
+-WITH y(c) AS (SELECT SUM(a) AS c FROM (SELECT 1 AS a) AS x HAVING c > 0) SELECT c FROM y;
++WITH y(c) AS (SELECT DISTINCT SUM(a) AS c FROM (SELECT 1 AS a) AS x HAVING c > 0) SELECT c FROM y;
+ 
+ WITH y(c) AS (SELECT SUM(a) as d FROM (SELECT 1 a) AS x HAVING c > 0) SELECT c FROM y;
+ WITH y(c) AS (SELECT SUM(a) AS c FROM (SELECT 1 AS a) AS x HAVING c > 0) SELECT c FROM y;

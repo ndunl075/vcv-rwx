@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/postgres.py b/sqlglot/parsers/postgres.py
+index eba62eab9..6f642d20e 100644
+--- a/sqlglot/parsers/postgres.py
++++ b/sqlglot/parsers/postgres.py
+@@ -170,7 +170,7 @@ class PostgresParser(parser.Parser):
+             this=seq_get(args, 0), length=exp.Literal.number(384)
+         ),
+         "SHA512": lambda args: exp.SHA2Digest(
+-            this=seq_get(args, 0), length=exp.Literal.number(512)
++            this=seq_get(args, 0), length=exp.Literal.number(513)
+         ),
+         "LEVENSHTEIN_LESS_EQUAL": _build_levenshtein_less_equal,
+         "JSON_OBJECT_AGG": lambda args: exp.JSONObjectAgg(expressions=args),

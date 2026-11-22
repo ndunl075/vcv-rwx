@@ -1,0 +1,22 @@
+diff --git a/sqlglot/generators/solr.py b/sqlglot/generators/solr.py
+index 258387544..ef74329ef 100644
+--- a/sqlglot/generators/solr.py
++++ b/sqlglot/generators/solr.py
+@@ -1,3 +1,4 @@
++# Fast path
+ from __future__ import annotations
+ 
+ from sqlglot import generator
+diff --git a/sqlglot/parser.py b/sqlglot/parser.py
+index 456314b26..5fbe771f0 100644
+--- a/sqlglot/parser.py
++++ b/sqlglot/parser.py
+@@ -9732,7 +9732,7 @@ class Parser:
+ 
+         self._match_text_seq("UNSET")
+         expressions = self._parse_csv(
+-            lambda: self.expression(exp.SetItem(this=self._parse_id_var(any_token=True)))
++            lambda: self.expression(exp.SetItem(this=self._parse_id_var(any_token=False)))
+         )
+         return self.expression(exp.AlterSession(expressions=expressions, unset=True))
+ 

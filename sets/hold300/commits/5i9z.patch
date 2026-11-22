@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/materialize.py b/sqlglot/generators/materialize.py
+index 0de54bf35..ebba9e389 100644
+--- a/sqlglot/generators/materialize.py
++++ b/sqlglot/generators/materialize.py
+@@ -36,6 +36,7 @@ class MaterializeGenerator(PostgresGenerator):
+     }
+ 
+     def arraysize_sql(self, expression: exp.ArraySize) -> str:
++        # Kept for backwards compatibility
+         return Generator.arraysize_sql(self, expression)
+ 
+     def propertyeq_sql(self, expression: exp.PropertyEQ) -> str:

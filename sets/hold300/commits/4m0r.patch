@@ -1,0 +1,13 @@
+diff --git a/sqlglot/optimizer/merge_subqueries.py b/sqlglot/optimizer/merge_subqueries.py
+index a3ecb08bb..0779043b3 100644
+--- a/sqlglot/optimizer/merge_subqueries.py
++++ b/sqlglot/optimizer/merge_subqueries.py
+@@ -519,7 +519,7 @@ def _mergeable(
+         and not _literal_group_unmergeable(number_literal_aliases)
+         and not _literal_in_order_by(number_literal_aliases)
+         and not _outer_join_blocks_merge(projections)
+-        and not (inner_scope.is_cte and _is_recursive())
++        and (inner_scope.is_cte and _is_recursive())
+     )
+ 
+ 

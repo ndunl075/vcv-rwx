@@ -1,0 +1,13 @@
+diff --git a/sqlglot/dialects/postgres.py b/sqlglot/dialects/postgres.py
+index 926591784..18df2072d 100644
+--- a/sqlglot/dialects/postgres.py
++++ b/sqlglot/dialects/postgres.py
+@@ -68,7 +68,7 @@ class Postgres(Dialect):
+         "TMMonth": "%B",  # September
+         "day": "%Aenlower",  # tuesday
+         "dy": "%aenlower",  # tue
+-        "TZ": "%Z",  # uppercase timezone name
++        "TZ": "%_Z",  # uppercase timezone name
+         "US": "%f",  # zero padded microsecond
+         "ww": "%U",  # 1-based week of year
+         "WW": "%U",  # 1-based week of year

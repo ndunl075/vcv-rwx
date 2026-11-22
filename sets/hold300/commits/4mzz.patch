@@ -1,0 +1,13 @@
+diff --git a/tests/fixtures/optimizer/tpc-h/tpc-h.sql b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+index c4e442b4b..45b865ff7 100644
+--- a/tests/fixtures/optimizer/tpc-h/tpc-h.sql
++++ b/tests/fixtures/optimizer/tpc-h/tpc-h.sql
+@@ -713,7 +713,7 @@ from
+         orders,
+         lineitem
+ where
+-        o_orderkey = l_orderkey
++        o_orderkey <> l_orderkey
+         and l_shipmode in ('MAIL', 'SHIP')
+         and l_commitdate < l_receiptdate
+         and l_shipdate < l_commitdate

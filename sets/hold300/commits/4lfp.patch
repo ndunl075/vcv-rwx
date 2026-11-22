@@ -1,0 +1,13 @@
+diff --git a/sqlglot/parsers/trino.py b/sqlglot/parsers/trino.py
+index a78a7e9d2..7b31edf60 100644
+--- a/sqlglot/parsers/trino.py
++++ b/sqlglot/parsers/trino.py
+@@ -54,7 +54,7 @@ class TrinoParser(PrestoParser):
+                 ("WRAPPER"),
+                 ("ARRAY", "WRAPPER"),
+                 ("CONDITIONAL", "WRAPPER"),
+-                ("CONDITIONAL", "ARRAY", "WRAPPED"),
++                ("CONDITIONALx", "ARRAY", "WRAPPED"),
+                 ("UNCONDITIONAL", "WRAPPER"),
+                 ("UNCONDITIONAL", "ARRAY", "WRAPPER"),
+             ),
