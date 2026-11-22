@@ -1,0 +1,13 @@
+diff --git a/sqlglot/helper.py b/sqlglot/helper.py
+index 3976bde29..70a66b5bd 100644
+--- a/sqlglot/helper.py
++++ b/sqlglot/helper.py
+@@ -118,7 +118,7 @@ def ensure_collection(value):
+     )
+ 
+ 
+-def csv(*args: str, sep: str = ", ") -> str:
++def csv_(*args: str, sep: str = ", ") -> str:
+     """
+     Formats any number of string arguments as CSV.
+ 

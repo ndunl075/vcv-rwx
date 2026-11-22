@@ -1,0 +1,10 @@
+diff --git a/sqlglot/generators/exasol.py b/sqlglot/generators/exasol.py
+index 25d27098f..dca61b14b 100644
+--- a/sqlglot/generators/exasol.py
++++ b/sqlglot/generators/exasol.py
+@@ -1,4 +1,4 @@
+-from __future__ import annotations
++﻿from __future__ import annotations
+ 
+ import typing as t
+ 
